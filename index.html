@@ -181,6 +181,7 @@ tbody tr:last-child{border-bottom:none}
 
 /* ===== FORM ===== */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+input[type="date"]{-webkit-appearance:none;appearance:none;width:100%;height:36px;padding:6px 8px;font-size:13px}
 .form-group{display:flex;flex-direction:column;gap:5px}
 .form-group.full{grid-column:span 2}
 label{font-size:11.5px;font-weight:500;color:var(--text2)}
@@ -274,15 +275,52 @@ body.dark .alert-banner.info{background:#1e3a5f;border-color:#3b82f6;color:#93c5
 .item-row input:last-of-type{border-right:none}
 tbody tr:hover{background:var(--blue-light)}
 
+/* ===== GRIDS INLINE MOBILE ===== */
+@media(max-width:768px){
+  [style*="grid-template-columns:repeat(4,1fr)"]{grid-template-columns:1fr 1fr!important}
+  [style*="grid-template-columns:1fr 240px"]{grid-template-columns:1fr!important}
+  [style*="grid-template-columns:1fr 274px"]{grid-template-columns:1fr!important}
+  [style*="grid-template-columns:2fr 1fr"]{grid-template-columns:1fr!important}
+  [style*="grid-template-columns:1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important}
+}
+/* ===== HAMBURGER ===== */
+.mob-menu-btn{display:none;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;cursor:pointer;background:var(--border2);border:1px solid var(--border);flex-shrink:0;margin-right:6px;-webkit-tap-highlight-color:transparent}
+.mob-menu-btn svg{display:block;color:var(--text)}
+.mob-menu-btn:active{background:var(--border)}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99}
+.mob-overlay.show{display:block}
+
 /* ===== RESPONSIVE ===== */
 @media(max-width:768px){
-  .sidebar{transform:translateX(-100%)}
+  .mob-menu-btn{display:flex}
+  .sidebar{transform:translateX(-100%);z-index:100}
   .sidebar.open{transform:translateX(0)}
   .main{margin-left:0}
-  .kpi-grid{grid-template-columns:1fr 1fr}
+  .content{padding:12px 14px}
+  .topbar{padding:0 12px;height:52px}
+  .kpi-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .kpi-card{padding:12px}
+  .kpi-value{font-size:18px}
   .dash-grid,.dash-grid-3{grid-template-columns:1fr}
   .form-grid{grid-template-columns:1fr}
   .form-group.full{grid-column:span 1}
+  .topbar-left{min-width:0;flex:1;overflow:hidden}
+  .topbar-left h1{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topbar-left p{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .topbar-right{flex-shrink:0;gap:4px}
+  .topbar-right .filter-select{display:none}
+  .btn-long-text{display:none}
+  .btn-short-text{display:inline!important}
+  .btn-nuevo-mob{font-size:11px!important;padding:5px 8px!important}
+  .ent-pagos-grid{grid-template-columns:1fr 1fr!important}
+  .time-sel select{font-size:12px;padding:4px 3px!important;min-width:0}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .modal{width:95vw!important;max-width:95vw!important;margin:10px auto;max-height:90vh;overflow-y:auto}
+  .card{padding:12px}
+  .filter-chip{font-size:11px;padding:4px 10px}
+  .btn-sm{font-size:11.5px;padding:6px 10px}
+  .item-row{grid-template-columns:2fr 1fr 70px 28px!important}
+  .sb-logo-name{font-size:14px}
 }
 
 /* ===== AGENDA ===== */
@@ -378,7 +416,9 @@ const MEDIOS=['Yape','Plin','Efectivo','Transferencia','Tarjeta','Otro'];
 const SERVICIOS=['Instalación cortinas','Instalación rollers','Instalación stores','Lavado','Medición','Presupuesto','Otro'];
 const CAT_COLORES=['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#ec4899','#f97316'];
 
-function hoy(){return new Date().toISOString().slice(0,10)}
+function hoy(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima'}).format(new Date());}
+function mesCurrent(){return hoy().slice(0,7);}
+function diasDesdeHoy(n){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima'}).format(new Date(Date.now()+n*86400000));}
 
 // Selector de hora amigable: genera dos <select> (horas y minutos)
 function timeSelect(id, val='09:00'){
@@ -388,7 +428,7 @@ function timeSelect(id, val='09:00'){
   const selStyle='padding:6px 8px;border:1px solid var(--border);border-radius:7px;background:var(--white);color:var(--text);font-size:13px;cursor:pointer;font-family:\'Inter\',sans-serif;flex:1';
   const hOpts=horas.map(h=>'<option value="'+h+'"'+(h===hh?' selected':'')+'>'+h+'</option>').join('');
   const mOpts=mins.map(m=>'<option value="'+m+'"'+(m===mm?' selected':'')+'>'+m+'</option>').join('');
-  return '<div style="display:flex;align-items:center;gap:4px">'
+  return '<div class="time-sel" style="display:flex;align-items:center;gap:4px">'
     +'<select id="'+id+'_h" style="'+selStyle+'">'+hOpts+'</select>'
     +'<span style="font-size:16px;font-weight:700;color:var(--text2)">:</span>'
     +'<select id="'+id+'_m" style="'+selStyle+'">'+mOpts+'</select>'
@@ -420,7 +460,7 @@ function calcKPIsMes(mesStr){
   return{ing,eg};
 }
 function getNotificaciones(){
-  const notifs=[], hoyStr=new Date().toISOString().slice(0,10);
+  const notifs=[], hoyStr=hoy();
   const stockBajo=S.inventario.filter(p=>p.stock<=p.stockMin);
   if(stockBajo.length>0) notifs.push({tipo:'red',ic:'⚠',texto:`${stockBajo.length} producto${stockBajo.length>1?'s':''} con stock bajo: ${stockBajo.slice(0,2).map(p=>p.nombre).join(', ')}${stockBajo.length>2?'...':''}`,link:'inventario',sub:'inventario'});
   const citsHoy=S.citas.filter(c=>c.fecha===hoyStr&&c.estado!=='Completada');
@@ -945,7 +985,7 @@ window.registrarSalidaById = (id)=>{
       const salida={
         productoId:id, nombre:p.nombre,
         cantidad:cant, stockAntes:p.stock, stockDespues:nuevoStock,
-        fecha:new Date().toISOString().slice(0,10),
+        fecha:hoy(),
         hora:new Date().toTimeString().slice(0,5),
         createdAt:new Date().toISOString()
       };
@@ -1724,26 +1764,37 @@ window.updateItem = (i,field,val)=>{
   }
 };
 
+// ← Pega aquí la URL de tu Google Apps Script proxy
+const SUNAT_PROXY = 'https://script.google.com/macros/s/AKfycbzY0nj5E31OckhoOzsm_G6GxL7ykNRaFu4Boda8z2MV8230kCSWXFa3X8bZEsFn2bg/exec';
+
 window.buscarRucModal = async()=>{
   const ruc=(document.getElementById('m_ruc')||{value:''}).value.trim();
   if(ruc.length!==11){notif('El RUC debe tener 11 dígitos');return;}
   const res=document.getElementById('ruc-modal-res');
-  if(res){res.style.display='block';res.style.color='var(--text3)';res.textContent='Buscando en SUNAT...';}
+  const mostrar=(color,txt)=>{if(res){res.style.display='block';res.style.color=color;res.textContent=txt;}};
+  mostrar('var(--text3)','Buscando...');
+  if(!SUNAT_PROXY){mostrar('var(--red)','Configura el proxy SUNAT en el código.');return;}
   try{
-    const r=await fetch('https://api.allorigins.win/get?url='+encodeURIComponent('https://api.apis.net.pe/v2/sunat/ruc?numero='+ruc));
-    const wrapper=await r.json();
-    const d=wrapper.contents?JSON.parse(wrapper.contents):wrapper;
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),15000);
+    const r=await fetch(SUNAT_PROXY+'?ruc='+ruc,{signal:ctrl.signal,cache:'no-store',mode:'cors',redirect:'follow'});
+    clearTimeout(tid);
+    const txt=await r.text();
+    console.log('[RUC respuesta]',txt);
+    const d=JSON.parse(txt);
     const razon=d.razonSocial||d.nombre||d.razon_social||null;
+    const dir=d.direccion||d.domicilioFiscal||null;
     if(razon){
-      if(res){res.style.color='var(--green)';res.textContent='✓ '+razon;}
+      mostrar('var(--green)','✓ '+razon+(dir?' · '+dir:''));
       S._fc['m_rucRazon']=razon;
-      const cliInput=document.getElementById('m_cliente');
-      if(cliInput&&!cliInput.value.trim()){cliInput.value=razon;}
+      const ci=document.getElementById('m_cliente');if(ci)ci.value=razon;
+      const di=document.getElementById('m_cli_dir');if(di&&dir&&!di.value.trim())di.value=dir;
     } else {
-      if(res){res.style.color='var(--red)';res.textContent='RUC no encontrado en SUNAT';}
+      mostrar('var(--red)','RUC no encontrado en SUNAT.');
     }
   }catch(e){
-    if(res){res.style.color='var(--red)';res.textContent='Error al consultar. Verifica tu conexión.';}
+    console.error('[RUC error]',e);
+    mostrar('var(--red)','Error: '+e.message);
   }
 };
 window.syncMontoEntrega = (v)=>{ calcSaldo(); };
@@ -1832,6 +1883,19 @@ window.calcSaldo = ()=>{
   if(el) el.textContent=saldo>=0?'S/.'+saldo.toFixed(2):'—';
 };
 
+window.toggleSidebar = ()=>{
+  const sb=document.querySelector('.sidebar');
+  const ov=document.querySelector('.mob-overlay');
+  if(!sb)return;
+  const open=sb.classList.toggle('open');
+  if(ov){ov.classList.toggle('show',open);}
+};
+window.closeSidebar = ()=>{
+  const sb=document.querySelector('.sidebar');
+  const ov=document.querySelector('.mob-overlay');
+  if(sb)sb.classList.remove('open');
+  if(ov)ov.classList.remove('show');
+};
 window.toggleDark = ()=>{
   S.darkMode=!S.darkMode;
   document.body.classList.toggle('dark',S.darkMode);
@@ -1859,9 +1923,9 @@ window.sendChatMsg = async(preguntaDirecta)=>{
 
   // ===== CONTEXTO COMPLETO DEL NEGOCIO =====
   const _n=new Date();
-  const _mA=_n.toISOString().slice(0,7);
-  const _mP=new Date(_n.getFullYear(),_n.getMonth()-1,1).toISOString().slice(0,7);
-  const _hoy=_n.toISOString().slice(0,10);
+  const _mA=mesCurrent();
+  const _mP=new Date(_n.getFullYear(),_n.getMonth()-1,1).toLocaleDateString('en-CA',{timeZone:'America/Lima'}).slice(0,7);
+  const _hoy=hoy();
   const _ingA=S.movimientos.filter(m=>m.fecha?.startsWith(_mA)&&m.tipo==='Ingreso').reduce((s,m)=>s+(m.monto||0),0);
   const _egA=S.movimientos.filter(m=>m.fecha?.startsWith(_mA)&&m.tipo==='Egreso').reduce((s,m)=>s+(m.monto||0),0);
   const _ingP=S.movimientos.filter(m=>m.fecha?.startsWith(_mP)&&m.tipo==='Ingreso').reduce((s,m)=>s+(m.monto||0),0);
@@ -1876,7 +1940,7 @@ window.sendChatMsg = async(preguntaDirecta)=>{
   S.movimientos.filter(m=>m.tipo==='Ingreso'&&m.cliente).forEach(m=>{const c=m.cliente.trim();if(!_clU[c]||m.fecha>_clU[c])_clU[c]=m.fecha;});
   const _i90=Object.entries(_clU).filter(([c,d])=>((_n-new Date(d))/86400000)>=90).map(([c,d])=>c+'('+Math.round((_n-new Date(d))/86400000)+' días)').join(', ');
   // Predicción semana (promedio 4 sem)
-  const _sw=[];for(let w=1;w<=4;w++){const i=new Date(_n.getTime()-w*7*86400000).toISOString().slice(0,10);const f=new Date(_n.getTime()-(w-1)*7*86400000).toISOString().slice(0,10);_sw.push(S.movimientos.filter(m=>m.tipo==='Ingreso'&&m.fecha>=i&&m.fecha<f).reduce((s,m)=>s+(m.monto||0),0));}
+  const _sw=[];for(let w=1;w<=4;w++){const i=diasDesdeHoy(-w*7);const f=diasDesdeHoy(-(w-1)*7);_sw.push(S.movimientos.filter(m=>m.tipo==='Ingreso'&&m.fecha>=i&&m.fecha<f).reduce((s,m)=>s+(m.monto||0),0));}
   const _pred=_sw.filter(v=>v>0).length?Math.round(_sw.reduce((s,v)=>s+v,0)/_sw.filter(v=>v>0).length):0;
   // Cobros pendientes
   const _cobP=S.entregas.filter(e=>e.estado!=='Completada'&&(e.pendiente||0)>0).reduce((s,e)=>s+(e.pendiente||0),0);
@@ -2316,19 +2380,6 @@ function renderLogin(){
             ?'<span style="display:flex;align-items:center;justify-content:center;gap:8px"><span style="width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite;display:inline-block"></span>Verificando...</span>'
             :isReg?'🚀 Crear cuenta':'→ Ingresar al sistema'}
         </button>
-        <!-- Divider -->
-        <div class="lp-divider">o continúa con</div>
-        <!-- Social -->
-        <div class="lp-social">
-          <button class="lp-social-btn" onclick="loginGoogle()">
-            <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-            Google
-          </button>
-          <button class="lp-social-btn" onclick="loginWhatsApp()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            WhatsApp
-          </button>
-        </div>
         <!-- Toggle -->
         <div class="lp-toggle">
           ${isReg?'¿Ya tienes cuenta?':'¿No tienes cuenta?'}
@@ -2377,7 +2428,7 @@ function renderApp(){
     {id:'caja',icon:_svgCaja,label:'Caja & Ventas',subs:[{id:'historial',label:'Historial'},{id:'comprobantes',label:'Comprobantes'}],group:'Operaciones'},
     {id:'inventario',icon:_svgInv,label:'Inventario',subs:[{id:'productos',label:'Productos'},{id:'salidas',label:'Registrar salida'}],group:'Operaciones'},
     {id:'clientes',icon:_svgCli,label:'Clientes',subs:[{id:'lista',label:'Lista de clientes'}],group:'Operaciones'},
-    {id:'agenda',icon:_svgAge,label:'Agenda',subs:[{id:'hoy',label:'Citas de hoy'},{id:'calendario',label:'Todas las citas'}],group:'Operaciones'},
+    {id:'agenda',icon:_svgAge,label:'Agenda',subs:[{id:'hoy',label:'Citas de hoy'}],group:'Operaciones'},
     {id:'cotizaciones',icon:_svgCot,label:'Cotizaciones',single:true,group:'Operaciones'},
     {id:'entregas',icon:_svgEnt,label:'Entregas',single:true,badge:'entregas',group:'Operaciones'},
     {id:'graficos',icon:_svgGraf,label:'Análisis & Gráficos',single:true,group:'Análisis'},
@@ -2387,7 +2438,7 @@ function renderApp(){
   ].filter(n=>puedo(n.id));
 
   const sbHtml=(()=>{
-    const hoyBadge=new Date().toISOString().slice(0,10);
+    const hoyBadge=hoy();
     let out='';
     let lastGroup='';
     nav.forEach(n=>{
@@ -2399,17 +2450,17 @@ function renderApp(){
         const act=S.seccion===n.id;
         const entBadge=n.id==='entregas'?(()=>{const v=S.entregas.filter(e=>e.estado!=='Completada'&&e.fechaEntrega<=hoyBadge).length;return v>0?`<span style="margin-left:auto;background:#ef4444;color:#fff;font-size:9px;font-weight:600;padding:1px 6px;border-radius:99px">${v}</span>`:''})():'';
         const badgeHtml=n.id==='entregas'?entBadge:n.id==='inventario'&&S.inventario.filter(p=>p.stock<=p.stockMin).length>0?`<span style="margin-left:auto;background:#f59e0b;color:#fff;font-size:9px;font-weight:600;padding:1px 6px;border-radius:99px">${S.inventario.filter(p=>p.stock<=p.stockMin).length}</span>`:n.id==='agenda'&&S.citas.filter(c=>c.fecha===hoyBadge&&c.estado!=='Completada').length>0?`<span style="margin-left:auto;background:#ef4444;color:#fff;font-size:9px;font-weight:600;padding:1px 6px;border-radius:99px">${S.citas.filter(c=>c.fecha===hoyBadge&&c.estado!=='Completada').length}</span>`:'';
-        out+=`<div class="sb-single ${act?'active':''}" onclick="ir('${n.id}')">
+        out+=`<div class="sb-single ${act?'active':''}" onclick="ir('${n.id}');closeSidebar()">
           <span class="sb-single-icon">${n.icon}</span>
           <span class="sb-single-label">${n.label}</span>
           ${badgeHtml}
         </div>`;
       } else {
         const open=S.seccion===n.id;
-        const subHtml=n.subs.map(s=>`<div class="sb-item ${S.seccion===n.id&&S.subSeccion===s.id?'active':''}" onclick="ir('${n.id}','${s.id}')">${s.label}</div>`).join('');
+        const subHtml=n.subs.map(s=>`<div class="sb-item ${S.seccion===n.id&&S.subSeccion===s.id?'active':''}" onclick="ir('${n.id}','${s.id}');closeSidebar()">${s.label}</div>`).join('');
         const groupBadge=n.id==='inventario'&&S.inventario.filter(p=>p.stock<=p.stockMin).length>0?`<span style="margin-left:auto;background:#f59e0b;color:#fff;font-size:9px;font-weight:600;padding:1px 6px;border-radius:99px">${S.inventario.filter(p=>p.stock<=p.stockMin).length}</span>`:n.id==='agenda'&&S.citas.filter(c=>c.fecha===hoyBadge&&c.estado!=='Completada').length>0?`<span style="margin-left:auto;background:#ef4444;color:#fff;font-size:9px;font-weight:600;padding:1px 6px;border-radius:99px">${S.citas.filter(c=>c.fecha===hoyBadge&&c.estado!=='Completada').length}</span>`:'';
         out+=`<div class="sb-group">
-          <div class="sb-group-header ${open?'open':''}" onclick="ir('${n.id}','${n.subs[0].id}')">
+          <div class="sb-group-header ${open?'open':''}" onclick="ir('${n.id}','${n.subs[0].id}');closeSidebar()">
             <span class="sb-group-icon">${n.icon}</span>
             <span class="sb-group-label">${n.label}</span>
             ${groupBadge}
@@ -2450,7 +2501,7 @@ function renderApp(){
 
   if(S.seccion==='dashboard'){
     topbarTitle='Dashboard';topbarSub='Resumen · '+mesLabel;
-    const hoyStr2=new Date().toISOString().slice(0,10);
+    const hoyStr2=hoy();
     const movHoy=S.movimientos.filter(m=>m.fecha===hoyStr2);
     const ingH=movHoy.filter(m=>m.tipo==='Ingreso').reduce((s,m)=>s+m.monto,0);
     const egH=movHoy.filter(m=>m.tipo==='Egreso').reduce((s,m)=>s+m.monto,0);
@@ -2459,7 +2510,7 @@ function renderApp(){
     const ultMovs=S.movimientos.slice(0,4);
     const citasHoyD=S.citas.filter(c=>c.fecha===hoyStr2).slice(0,3);
     const stockBajoD=S.inventario.filter(p=>p.stock<=p.stockMin);
-    const mesActual=S.filtroMes==='todos'?new Date().toISOString().slice(0,7):S.filtroMes;
+    const mesActual=S.filtroMes==='todos'?mesCurrent():S.filtroMes;
     const kpiAct=calcKPIsMes(mesActual);
     const kpiAnt=calcKPIsMes(mesAnterior(mesActual));
     const dI=kpiAnt.ing>0?Math.round(((kpiAct.ing-kpiAnt.ing)/kpiAnt.ing)*100):null;
@@ -2486,7 +2537,7 @@ function renderApp(){
     const _ahora=new Date();
     const _fechaLeg=`${_diasSem[_ahora.getDay()]} ${_ahora.getDate()} de ${_mesesN[_ahora.getMonth()]}`;
     topbarTitle=_saludo+', '+_nomCap+'! 👋';
-    topbarSub=_fechaLeg+' · Margen '+salud+'%';
+    topbarSub=_fechaLeg;
     contenido=`
     ${banners}
     <div class="kpi-grid">
@@ -2530,9 +2581,9 @@ function renderApp(){
           const monday=new Date(today);monday.setDate(today.getDate()-dow);
           const bars=Array.from({length:7},(_,i)=>{
             const d=new Date(monday);d.setDate(monday.getDate()+i);
-            const f=d.toISOString().slice(0,10);
+            const f=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima'}).format(d);
             const v=S.movimientos.filter(m=>m.fecha===f&&m.tipo==='Ingreso').reduce((s,m)=>s+m.monto,0);
-            const isToday=f===today.toISOString().slice(0,10);
+            const isToday=f===hoy();
             return{f,v,l:labels[i],isToday};
           });
           const maxV=Math.max(...bars.map(b=>b.v),1);
@@ -2542,7 +2593,7 @@ function renderApp(){
       </div>
       <div class="card">
         ${(()=>{
-          const mesAct=new Date().toISOString().slice(0,7);
+          const mesAct=mesCurrent();
           const cliMes=[...new Set(S.movimientos.filter(m=>m.tipo==='Ingreso'&&m.cliente&&m.fecha&&m.fecha.startsWith(mesAct)).map(m=>m.cliente.trim()))];
           const entPendD=S.entregas.filter(e=>e.estado!=='Completada');
           const cobroPend=entPendD.reduce((s,e)=>s+(e.pendiente||0),0);
@@ -2907,8 +2958,8 @@ function renderApp(){
   }
   else if(S.seccion==='agenda'){
     topbarTitle='Agenda';topbarSub='Citas y calendario';
-    const hoyAg=new Date().toISOString().slice(0,10);
-    const semFinAg=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+    const hoyAg=hoy();
+    const semFinAg=diasDesdeHoy(7);
     const mesActAg=hoyAg.slice(0,7);
     const citasHoyAg=S.citas.filter(c=>c.fecha===hoyAg);
     const citasSemAg=S.citas.filter(c=>c.fecha>=hoyAg&&c.fecha<=semFinAg);
@@ -2918,6 +2969,7 @@ function renderApp(){
       if(S.filtroAgenda==='hoy') return citasHoyAg;
       if(S.filtroAgenda==='semana') return citasSemAg;
       if(S.filtroAgenda==='mes') return citasMesAg;
+      if(S.filtroAgenda==='todas') return [...S.citas].sort((a,b)=>a.fecha>b.fecha?1:-1);
       // fecha específica del calendario: formato YYYY-MM-DD
       return S.citas.filter(c=>c.fecha===S.filtroAgenda);
     })();
@@ -2977,18 +3029,18 @@ function renderApp(){
 
     contenido=`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-      ${[['hoy','Hoy'],['semana','Esta semana'],['mes','Este mes']].map(([v,l])=>`<button class="filter-chip ${S.filtroAgenda===v?'active':''}" onclick="setFiltroAgenda('${v}')">${l}</button>`).join('')}
+      ${[['hoy','Hoy'],['semana','Esta semana'],['mes','Este mes'],['todas','Todas']].map(([v,l])=>`<button class="filter-chip ${S.filtroAgenda===v?'active':''}" onclick="setFiltroAgenda('${v}')">${l}</button>`).join('')}
       <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openModal('cita')">+ Nueva cita</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 240px;gap:14px;align-items:start">
       <div>
         ${(()=>{
-          const _lbl=S.filtroAgenda==='hoy'?'hoy':S.filtroAgenda==='semana'?'esta semana':S.filtroAgenda==='mes'?'este mes':S.filtroAgenda.split('-').reverse().join('/');
+          const _lbl=S.filtroAgenda==='hoy'?'hoy':S.filtroAgenda==='semana'?'esta semana':S.filtroAgenda==='mes'?'este mes':S.filtroAgenda==='todas'?'en total':S.filtroAgenda.split('-').reverse().join('/');
           return citasFiltradas.length>0?`<div style="background:var(--blue-light);border:1px solid var(--blue2);border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:12.5px;color:var(--blue);font-weight:500">📅 ${citasFiltradas.length} cita${citasFiltradas.length!==1?'s':''} ${_lbl}${proximaCita?` · Próxima: ${proximaCita.hora} — ${proximaCita.cliente}`:''}
           </div>`:'';
         })()}
         ${citasFiltradas.length===0
-          ?`<div class="card empty"><div class="empty-icon">📭</div><p>Sin citas ${S.filtroAgenda==='hoy'?'hoy':S.filtroAgenda==='semana'?'esta semana':S.filtroAgenda==='mes'?'este mes':'para esta fecha'}.</p></div>`
+          ?`<div class="card empty"><div class="empty-icon">📭</div><p>Sin citas ${S.filtroAgenda==='hoy'?'hoy':S.filtroAgenda==='semana'?'esta semana':S.filtroAgenda==='mes'?'este mes':S.filtroAgenda==='todas'?'registradas':'para esta fecha'}.</p></div>`
           :`<div class="card" style="padding:0;overflow:hidden">${citasFiltradas.map(c=>renderCitaNueva(c)).join('')}</div>`}
       </div>
       <div class="card" style="padding:14px">${calendarHTML}</div>
@@ -3088,8 +3140,8 @@ function renderApp(){
 
   else if(S.seccion==='entregas'){
     topbarTitle='Entregas';topbarSub='Seguimiento de entregas';
-    const hoyStr3=new Date().toISOString().slice(0,10);
-    const semStr=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+    const hoyStr3=hoy();
+    const semStr=diasDesdeHoy(7);
     const entPend=S.entregas.filter(e=>e.estado!=='Completada');
     const entVenc=entPend.filter(e=>e.fechaEntrega<hoyStr3);
     const entHoy=entPend.filter(e=>e.fechaEntrega===hoyStr3);
@@ -3183,8 +3235,8 @@ function renderApp(){
     topbarTitle='Asistente IA';topbarSub='Tu analista de negocio en tiempo real';
     // Computar insights para tarjetas y alertas
     const _cN=new Date();
-    const _cMA=_cN.toISOString().slice(0,7);
-    const _cMP=new Date(_cN.getFullYear(),_cN.getMonth()-1,1).toISOString().slice(0,7);
+    const _cMA=mesCurrent();
+    const _cMP=new Date(_cN.getFullYear(),_cN.getMonth()-1,1).toLocaleDateString('en-CA',{timeZone:'America/Lima'}).slice(0,7);
     const _cIA=S.movimientos.filter(m=>m.fecha?.startsWith(_cMA)&&m.tipo==='Ingreso').reduce((s,m)=>s+(m.monto||0),0);
     const _cIP=S.movimientos.filter(m=>m.fecha?.startsWith(_cMP)&&m.tipo==='Ingreso').reduce((s,m)=>s+(m.monto||0),0);
     const _cVI=_cIP>0?Math.round((_cIA-_cIP)/_cIP*100):null;
@@ -3195,7 +3247,7 @@ function renderApp(){
     const _cCU={};S.movimientos.filter(m=>m.tipo==='Ingreso'&&m.cliente).forEach(m=>{const c=m.cliente.trim();if(!_cCU[c]||m.fecha>_cCU[c])_cCU[c]=m.fecha;});
     const _cI90=Object.entries(_cCU).filter(([c,d])=>((_cN-new Date(d))/86400000)>=90);
     // Predicción semana
-    const _cSW=[];for(let w=1;w<=4;w++){const i=new Date(_cN.getTime()-w*7*86400000).toISOString().slice(0,10);const f=new Date(_cN.getTime()-(w-1)*7*86400000).toISOString().slice(0,10);_cSW.push(S.movimientos.filter(m=>m.tipo==='Ingreso'&&m.fecha>=i&&m.fecha<f).reduce((s,m)=>s+(m.monto||0),0));}
+    const _cSW=[];for(let w=1;w<=4;w++){const i=diasDesdeHoy(-w*7);const f=diasDesdeHoy(-(w-1)*7);_cSW.push(S.movimientos.filter(m=>m.tipo==='Ingreso'&&m.fecha>=i&&m.fecha<f).reduce((s,m)=>s+(m.monto||0),0));}
     const _cPS=_cSW.filter(v=>v>0).length?Math.round(_cSW.reduce((s,v)=>s+v,0)/_cSW.filter(v=>v>0).length):0;
     // Cobros pendientes
     const _cCP=S.entregas.filter(e=>e.estado!=='Completada'&&(e.pendiente||0)>0).reduce((s,e)=>s+(e.pendiente||0),0);
@@ -3329,11 +3381,11 @@ function renderApp(){
       const actionLabel={'add_movimiento':'➕ Nuevo movimiento','edit_movimiento':'✏️ Editó movimiento','register':'🆕 Registro','add_cotizacion':'📋 Cotización','convertir_venta':'💰 Convertir venta'}[a.action]||a.action;
       return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border2)">'
         +'<div style="width:32px;height:32px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">'+(a.email?.[0]?.toUpperCase()||'?')+'</div>'
-        +'<div style="flex:1;min-width:0">'
-        +'<div style="font-size:12.5px;font-weight:600;color:var(--text)">'+actionLabel+'</div>'
-        +'<div style="font-size:11px;color:var(--text3)">'+a.email+' · '+(a.detail||'')+'</div>'
+        +'<div style="flex:1;min-width:0;overflow:hidden">'
+        +'<div style="font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+actionLabel+'</div>'
+        +'<div style="font-size:10.5px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(a.detail||'')+'</div>'
+        +'<div style="font-size:10px;color:var(--text3)">'+ts+'</div>'
         +'</div>'
-        +'<div style="font-size:11px;color:var(--text3);flex-shrink:0">'+ts+'</div>'
         +'</div>';
     }).join('');
     contenido=`
@@ -3491,11 +3543,11 @@ function renderApp(){
 
           <div style="height:0.5px;background:var(--border);margin:2px 0"></div>`:''}
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <div class="form-group" style="margin:0"><label>Fecha</label><input type="date" id="m_fecha" value="${S._fc['m_fecha']||S.nuevoMov.fecha}"></div>
-            <div class="form-group" style="margin:0"><label>Medio de pago</label><select id="m_medio">${MEDIOS.map(m=>`<option value="${m}" ${(S._fc['m_medio']||S.nuevoMov.medioPago)===m?'selected':''}>${m}</option>`).join('')}</select></div>
+          <div class="form-grid">
+            <div class="form-group" style="margin:0"><label>Fecha</label><input type="date" id="m_fecha" value="${S._fc['m_fecha']||S.nuevoMov.fecha}" style="width:100%"></div>
+            <div class="form-group" style="margin:0"><label>Medio de pago</label><select id="m_medio" style="width:100%">${MEDIOS.map(m=>`<option value="${m}" ${(S._fc['m_medio']||S.nuevoMov.medioPago)===m?'selected':''}>${m}</option>`).join('')}</select></div>
+            <div class="form-group" style="margin:0"><label>Comprobante</label><select id="m_comp" style="width:100%">${['Boleta','Factura','Recibo','Sin comprobante'].map(c=>`<option value="${c}" ${(S._fc['m_comp']||S.nuevoMov.comprobante)===c?'selected':''}>${c}</option>`).join('')}</select></div>
           </div>
-          <div class="form-group" style="margin:0"><label>Comprobante</label><select id="m_comp" style="max-width:200px">${['Boleta','Factura','Recibo','Sin comprobante'].map(c=>`<option value="${c}" ${(S._fc['m_comp']||S.nuevoMov.comprobante)===c?'selected':''}>${c}</option>`).join('')}</select></div>
 
           <div style="height:0.5px;background:var(--border);margin:2px 0"></div>
 
@@ -3524,10 +3576,12 @@ function renderApp(){
           <div style="height:0.5px;background:var(--border);margin:2px 0"></div>
           <div style="background:var(--yellow-light);border:1px solid #fcd34d;border-radius:10px;padding:11px 12px">
             <div style="font-size:10.5px;font-weight:700;color:#d97706;margin-bottom:8px">📦 Entrega y pagos</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-              <div class="form-group" style="margin:0"><label>Fecha entrega <span style="color:var(--red)">*</span></label><input type="date" id="m_fechaEntrega" value="${S._fc['m_fechaEntrega']||''}"></div>
-              <div class="form-group" style="margin:0"><label>Hora entrega</label>${timeSelect('m_horaEntrega',S._fc['m_horaEntrega']||'09:00')}</div>
-              <div class="form-group" style="margin:0"><label>A cuenta (S/.)</label><input type="number" id="m_aCuenta" placeholder="0.00" min="0" step="0.01" value="${S._fc['m_aCuenta']||''}"></div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div class="form-group" style="margin:0"><label>Fecha entrega <span style="color:var(--red)">*</span></label><input type="date" id="m_fechaEntrega" value="${S._fc['m_fechaEntrega']||''}" style="width:100%"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div class="form-group" style="margin:0"><label>Hora entrega</label>${timeSelect('m_horaEntrega',S._fc['m_horaEntrega']||'09:00')}</div>
+                <div class="form-group" style="margin:0"><label>A cuenta (S/.)</label><input type="number" id="m_aCuenta" placeholder="0.00" min="0" step="0.01" value="${S._fc['m_aCuenta']||''}"></div>
+              </div>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:0.5px solid #fcd34d">
               <span style="font-size:11px;color:#92400e">Saldo pendiente:</span>
@@ -3683,6 +3737,7 @@ function renderApp(){
   }
 
   document.getElementById('app').innerHTML=`
+  <div class="mob-overlay" onclick="closeSidebar()"></div>
   <div class="layout">
     <nav class="sidebar">
       <div class="sb-logo">
@@ -3710,6 +3765,9 @@ function renderApp(){
     </nav>
     <div class="main">
       <div class="topbar">
+        <button class="mob-menu-btn" onclick="toggleSidebar()" aria-label="Menú">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
         <div class="topbar-left">
           <h1>${topbarTitle}</h1>
           <p>${topbarSub}</p>
@@ -3721,7 +3779,7 @@ function renderApp(){
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             ${getNotificaciones().length>0?'<div class="notif-badge"></div>':''}
           </div>
-          <button class="btn btn-primary btn-sm" onclick="openModal('movimiento')">+ Nuevo movimiento</button>
+          <button class="btn btn-primary btn-sm btn-nuevo-mob" onclick="openModal('movimiento')">+ <span class="btn-long-text">Nuevo movimiento</span><span class="btn-short-text" style="display:none">Nuevo</span></button>
         </div>
       </div>
       ${S.showNotifPanel?`<div style="position:fixed;inset:0;z-index:149" onclick="closeNotifPanel()"></div><div class="notif-panel">
