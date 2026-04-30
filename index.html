@@ -14,6 +14,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
+/* ========================================
+   VARIABLES Y RESET
+   Variables CSS globales, modo oscuro y reset base
+   ======================================== */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#f8fafc;--white:#ffffff;--sidebar:#1e2235;--sidebar2:#252b42;
@@ -40,12 +44,16 @@ body.dark{
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
+/* ========================================
+   LAYOUT Y SIDEBAR
+   Estructura principal, topbar y navegación lateral
+   ======================================== */
 /* ===== LAYOUT ===== */
 #app{min-height:100vh}
 .layout{display:flex;min-height:100vh}
 
 /* ===== SIDEBAR ===== */
-.sidebar{width:220px;background:var(--sidebar);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:transform .3s}
+.sidebar{width:220px;background:var(--sidebar);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:transform .3s ease;will-change:transform}
 .sb-logo{padding:20px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.06)}
 .sb-logo-mark{width:34px;height:34px;border-radius:9px;background:var(--blue2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .sb-logo-mark svg{width:20px;height:20px}
@@ -88,6 +96,10 @@ body.dark{
 .topbar-right{display:flex;align-items:center;gap:8px}
 .content{padding:20px 24px;flex:1}
 
+/* ========================================
+   COMPONENTES UI
+   Botones, cards, KPIs, tabla, badges, modales, formularios y utilidades
+   ======================================== */
 /* ===== BOTONES ===== */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:500;cursor:pointer;border:none;transition:all .15s;font-family:'Inter',sans-serif}
 .btn-primary{background:var(--blue);color:#fff}
@@ -197,6 +209,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue2);box-shadow:0 0
 .empty-icon{font-size:2.5rem;margin-bottom:10px}
 .empty p{font-size:13px}
 
+/* ========================================
+   VISTAS — LOGIN Y ONBOARDING
+   Estilos de pantalla de acceso, registro y onboarding inicial
+   ======================================== */
 /* ===== LOGIN ===== */
 .login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#eff6ff 0%,#f8fafc 50%,#f5f3ff 100%);padding:1rem}
 .login-card{background:var(--white);border:1px solid var(--border);border-radius:20px;padding:36px;width:100%;max-width:400px;box-shadow:var(--shadow-md)}
@@ -287,8 +303,8 @@ tbody tr:hover{background:var(--blue-light)}
 .mob-menu-btn{display:none;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;cursor:pointer;background:var(--border2);border:1px solid var(--border);flex-shrink:0;margin-right:6px;-webkit-tap-highlight-color:transparent}
 .mob-menu-btn svg{display:block;color:var(--text)}
 .mob-menu-btn:active{background:var(--border)}
-.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99}
-.mob-overlay.show{display:block}
+.mob-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99;opacity:0;pointer-events:none;transition:opacity .3s}
+.mob-overlay.show{opacity:1;pointer-events:all}
 
 /* ===== RESPONSIVE ===== */
 @media(max-width:768px){
@@ -355,10 +371,10 @@ tbody tr:hover{background:var(--blue-light)}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,signInAnonymously,onAuthStateChanged,sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,signInAnonymously,onAuthStateChanged,sendPasswordResetEmail,updatePassword,GoogleAuthProvider,signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase,ref,push,set,remove,onValue,update,get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-const fbApp = initializeApp({
+const _FBCFG = {
   apiKey:"AIzaSyDN2ZvxX8pORVPGAPmaRCdrv3duSf_myuA",
   authDomain:"cajacontrol-cb78d.firebaseapp.com",
   databaseURL:"https://cajacontrol-cb78d-default-rtdb.firebaseio.com",
@@ -366,13 +382,28 @@ const fbApp = initializeApp({
   storageBucket:"cajacontrol-cb78d.firebasestorage.app",
   messagingSenderId:"786272962577",
   appId:"1:786272962577:web:83a61f6a10ad4e625109b0"
-});
-const auth = getAuth(fbApp);
-const db   = getDatabase(fbApp);
+};
+const fbApp    = initializeApp(_FBCFG);
+const fbAppSec = initializeApp(_FBCFG, 'cifra-admin-sec');
+const auth    = getAuth(fbApp);
+const authSec = getAuth(fbAppSec);
+const db      = getDatabase(fbApp);
+const dbSec   = getDatabase(fbAppSec);
 
+// ---- Super-admin / Cifra panel ----
+const SUPER_ADMIN_EMAIL = 'cifra.admin@gmail.com';
+const CIFRA_WHATSAPP   = '51982287999'; // reemplaza con tu número real
+const PLAN_PRECIO      = 299;
+
+/* ========================================
+   ESTADO GLOBAL
+   Objeto S con toda la state de la app, constantes de catálogos y utilidades
+   ======================================== */
 // ============ ESTADO ============
 const S = {
   inicializando:true, user:null, loading:false, error:'', esRegistro:false,
+  onboarding:false, onboardingStep:1, onboardingData:{rubro:'',nombre:'',ruc:'',pais:'Perú',departamento:'Lima',provincia:'Lima',distrito:'',whatsapp:'',telefono:'',direccion:'',añosEnMercado:'',ventasMensuales:'',equipo:{cantidad:'',roles:[]},objetivos:[],modulos:{caja:true,inventario:true,agenda:true,comprobantes:true,entregas:true,ia:false},categorias:[]},
+  negocioConfig:null,
   rol:'admin', ownerUid:null, nombre:'', // 'admin' | 'vendedor' | 'tecnico'
   seccion:'dashboard', subSeccion:'movimientos',
   movimientos:[], clientes:[], citas:[], inventario:[], comprobantes:[], salidas:[], entregas:[], cotizaciones:[],
@@ -388,7 +419,10 @@ const S = {
   nuevoCliente:{nombre:'',telefono:'',email:'',direccion:'',notas:''},
   nuevoProducto:{nombre:'',categoria:'',stock:0,stockMin:5,precio:0,unidad:'und'},
   configEditando:false,
-  config:{nombre:'Servicios y Decoraciones en General',ruc:'10071127210',telefono:'982287999 / 947152700',direccion:'Av. Angamos Este 2438 - Stand 2, Surquillo - La Calera',email:'renzo_199818@hotmail.com'},
+  adminSeccion:'negocios', adminNegocios:[], adminShowCrear:false, adminCreando:false, adminNegocioCreado:null, adminCrearError:'', adminFormData:{}, adminNegocioDetalle:null, adminDetalleTab:'info',
+  cambiarPassword:false, passwordExito:false,
+  negocioTipo:'pagado', movimientosUsados:0, showLimiteModal:false, loginTab:'login', esPrueba:false,
+  config:{nombre:'',ruc:'',telefono:'',direccion:'',email:''},
   _fc:{}, charts:{}, _dCharts:{}
 };
 
@@ -399,6 +433,17 @@ const PERMISOS = {
   tecnico:  {dashboard:0,caja:0,inventario:0,clientes:0,agenda:0,cotizaciones:0,entregas:1,graficos:0,chat:0,config:0,equipo:0,verCostos:0,eliminar:0,editar:0},
 };
 function puedo(permiso){return !!(PERMISOS[S.rol]||PERMISOS.tecnico)[permiso];}
+function moduloActivo(id){
+  const m=S.negocioConfig?.modulos;
+  if(!m) return true;
+  if(id==='caja') return m.caja!==false;
+  if(id==='inventario') return m.inventario!==false;
+  if(id==='agenda') return m.agenda!==false;
+  if(id==='comprobantes') return m.comprobantes!==false;
+  if(id==='entregas') return m.entregas!==false;
+  if(id==='graficos'||id==='chat') return m.ia!==false;
+  return true;
+}
 
 // ============ AUDIT LOG ============
 function auditoria(action, detail=''){
@@ -415,6 +460,20 @@ const CATS_EG=['Proveedores/Telas','Sueldos','Alquiler','Transporte','Servicios 
 const MEDIOS=['Yape','Plin','Efectivo','Transferencia','Tarjeta','Otro'];
 const SERVICIOS=['Instalación cortinas','Instalación rollers','Instalación stores','Lavado','Medición','Presupuesto','Otro'];
 const CAT_COLORES=['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#ec4899','#f97316'];
+
+// ============ ONBOARDING DATA ============
+const OB_PAISES=['Perú','Argentina','Bolivia','Brasil','Chile','Colombia','Ecuador','México','Paraguay','Uruguay','Venezuela','Estados Unidos','España','Otro'];
+const PERU_DEPTS=['Amazonas','Áncash','Apurímac','Arequipa','Ayacucho','Cajamarca','Callao','Cusco','Huancavelica','Huánuco','Ica','Junín','La Libertad','Lambayeque','Lima','Loreto','Madre de Dios','Moquegua','Pasco','Piura','Puno','San Martín','Tacna','Tumbes','Ucayali'];
+const PERU_PROVS={'Amazonas':['Chachapoyas','Bagua','Bongará','Condorcanqui','Luya','Rodríguez de Mendoza','Utcubamba'],'Áncash':['Huaraz','Bolognesi','Carhuaz','Casma','Corongo','Huari','Huarmey','Huaylas','Ocros','Pallasca','Pomabamba','Recuay','Santa','Sihuas','Yungay'],'Apurímac':['Abancay','Andahuaylas','Antabamba','Aymaraes','Cotabambas','Chincheros','Grau'],'Arequipa':['Arequipa','Camaná','Caravelí','Castilla','Caylloma','Condesuyos','Islay','La Unión'],'Ayacucho':['Huamanga','Cangallo','Huanca Sancos','Huanta','La Mar','Lucanas','Parinacochas','Páucar del Sara Sara','Sucre','Víctor Fajardo','Vilcas Huamán'],'Cajamarca':['Cajamarca','Cajabamba','Celendín','Chota','Contumazá','Cutervo','Hualgayoc','Jaén','San Ignacio','San Marcos','San Miguel','San Pablo','Santa Cruz'],'Callao':['Callao'],'Cusco':['Cusco','Acomayo','Anta','Calca','Canas','Canchis','Chumbivilcas','Espinar','La Convención','Paruro','Paucartambo','Quispicanchi','Urubamba'],'Huancavelica':['Huancavelica','Acobamba','Angaraes','Castrovirreyna','Churcampa','Huaytará','Tayacaja'],'Huánuco':['Huánuco','Ambo','Dos de Mayo','Huacaybamba','Huamalíes','Leoncio Prado','Marañón','Pachitea','Puerto Inca','Lauricocha','Yarowilca'],'Ica':['Ica','Chincha','Nazca','Palpa','Pisco'],'Junín':['Huancayo','Chanchamayo','Chupaca','Concepción','Jauja','Junín','Satipo','Tarma','Yauli'],'La Libertad':['Trujillo','Ascope','Bolívar','Chepén','Gran Chimú','Julcán','Otuzco','Pacasmayo','Pataz','Sánchez Carrión','Santiago de Chuco','Virú'],'Lambayeque':['Chiclayo','Ferreñafe','Lambayeque'],'Lima':['Lima','Barranca','Cajatambo','Canta','Cañete','Huaral','Huarochirí','Huaura','Oyón','Yauyos'],'Loreto':['Maynas','Alto Amazonas','Datem del Marañón','Loreto','Mariscal Ramón Castilla','Putumayo','Requena','Ucayali'],'Madre de Dios':['Tambopata','Manu','Tahuamanu'],'Moquegua':['Mariscal Nieto','General Sánchez Cerro','Ilo'],'Pasco':['Pasco','Daniel Alcides Carrión','Oxapampa'],'Piura':['Piura','Ayabaca','Huancabamba','Morropón','Paita','Sechura','Sullana','Talara'],'Puno':['Puno','Azángaro','Carabaya','Chucuito','El Collao','Huancané','Lampa','Melgar','Moho','San Antonio de Putina','San Román','Sandia','Yunguyo'],'San Martín':['Moyobamba','Bellavista','El Dorado','Huallaga','Lamas','Mariscal Cáceres','Picota','Rioja','San Martín','Tocache'],'Tacna':['Tacna','Candarave','Jorge Basadre','Tarata'],'Tumbes':['Tumbes','Contralmirante Villar','Zarumilla'],'Ucayali':['Coronel Portillo','Atalaya','Padre Abad','Purús']};
+const LIMA_DISTRITOS=['Ate','Barranco','Breña','Chorrillos','Comas','El Agustino','Independencia','Jesús María','La Molina','La Victoria','Lince','Los Olivos','Lurín','Magdalena del Mar','Miraflores','Pueblo Libre','Puente Piedra','Rímac','San Borja','San Isidro','San Juan de Lurigancho','San Juan de Miraflores','San Luis','San Martín de Porres','San Miguel','Santa Anita','Santiago de Surco','Surquillo','Villa El Salvador','Villa María del Triunfo'];
+const DISTRITOS_LIMA=LIMA_DISTRITOS; // alias kept for compatibility
+const OB_RUBROS=[{id:'cortinas',icon:'🪟',label:'Cortinas'},{id:'salon',icon:'✂️',label:'Salón'},{id:'ropa',icon:'👗',label:'Ropa'},{id:'restaurante',icon:'🍽️',label:'Restaurante'},{id:'taller',icon:'🔧',label:'Taller'},{id:'otro',icon:'🏪',label:'Otro'}];
+const OB_ROLES=['Admin','Vendedor','Técnico','Almacenero','Cajero','Instalador','Diseñador','Delivery'];
+const OB_OBJETIVOS=[{id:'caja',icon:'💰',label:'Controlar caja'},{id:'stock',icon:'📦',label:'No quedarme sin stock'},{id:'clientes',icon:'👥',label:'Conocer mejor a mis clientes'},{id:'ventas',icon:'📊',label:'Saber qué vendo más'},{id:'equipo',icon:'🤝',label:'Coordinar mi equipo'},{id:'tiempo',icon:'⏰',label:'Ahorrar tiempo'}];
+const OB_MODULOS=[{id:'caja',label:'Caja',icon:'💰',desc:'Control de ingresos y egresos'},{id:'inventario',label:'Inventario',icon:'📦',desc:'Stock y productos'},{id:'agenda',label:'Clientes y agenda',icon:'📅',desc:'Citas y clientes'},{id:'comprobantes',label:'Comprobantes',icon:'🧾',desc:'Boletas y facturas'},{id:'entregas',label:'Entregas',icon:'🚚',desc:'Control de pedidos'},{id:'ia',label:'Análisis IA',icon:'🤖',desc:'Insights automáticos'}];
+const OB_PRESETS={cortinas:{caja:true,inventario:true,agenda:true,comprobantes:true,entregas:true,ia:false},salon:{caja:true,inventario:false,agenda:true,comprobantes:true,entregas:false,ia:false},ropa:{caja:true,inventario:true,agenda:false,comprobantes:true,entregas:false,ia:false},restaurante:{caja:true,inventario:true,agenda:false,comprobantes:true,entregas:true,ia:false},taller:{caja:true,inventario:false,agenda:true,comprobantes:true,entregas:true,ia:false},otro:{caja:true,inventario:true,agenda:true,comprobantes:true,entregas:true,ia:false}};
+const OB_MSGS={caja:'Tendrás visibilidad total de ingresos y egresos en tiempo real.',stock:'Te alertaremos cuando el stock de tus productos esté bajo.',clientes:'Tu historial de clientes te ayudará a identificar a los más valiosos.',ventas:'Los gráficos de análisis te mostrarán tus productos y servicios más rentables.',equipo:'Tu equipo tendrá acceso según su rol para una mejor coordinación.',tiempo:'Los flujos automatizados reducirán el trabajo manual del día a día.'};
+const OB_CAT_PRESETS={cortinas:['Cortinas','Rollers','Stores','Lavado de cortinas','Alfombras','Fundas de muebles','Servicios','Otros'],salon:['Corte','Tinte','Peinado','Tratamientos','Manicure','Pedicure','Servicios','Otros'],ropa:['Polos','Pantalones','Vestidos','Accesorios','Ropa de niños','Calzado','Otros'],restaurante:['Platos de fondo','Entradas','Bebidas','Postres','Menú del día','Delivery','Otros'],taller:['Mano de obra','Repuestos','Diagnóstico','Mantenimiento','Instalación','Otros'],otro:['Productos','Servicios','Otros']};
 
 function hoy(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima'}).format(new Date());}
 function mesCurrent(){return hoy().slice(0,7);}
@@ -516,6 +575,10 @@ function calcKPIs(){
   return{ing,eg,neto,total,ticket};
 }
 
+/* ========================================
+   FIREBASE — CARGA Y SINCRONIZACIÓN
+   cargarDatos: determina rol, levanta onValue listeners para todas las colecciones
+   ======================================== */
 // ============ FIREBASE ============
 async function cargarDatos(uid){
   // Determinar rol y ownerUid leyendo el perfil del usuario
@@ -527,13 +590,17 @@ async function cargarDatos(uid){
       const perf = perfSnap.val();
       rol = perf.role || 'admin';
       ownerUid = perf.ownerUid || uid;
-      S.nombre = perf.nombre || '';
+      S.nombre = perf.nombre || S.nombre || '';
+      if(perf.primeraVez===true) S.cambiarPassword=true;
+      if(perf.tipo==='prueba'){S.esPrueba=true;S.negocioTipo='prueba';}
     } else if(S._pendingRole){
       // Registro en curso: doRegister ya validó el código, usamos el rol pendiente
       rol = S._pendingRole;
       ownerUid = S._pendingOwner || uid;
-      S._pendingRole = null; S._pendingOwner = null;
-      await set(ref(db,'userProfiles/'+uid),{role:rol,ownerUid,email:S.user?.email||'',createdAt:new Date().toISOString()});
+      const pendingNombre = S._pendingNombre || '';
+      S._pendingRole = null; S._pendingOwner = null; S._pendingNombre = null;
+      await set(ref(db,'userProfiles/'+uid),{role:rol,ownerUid,email:S.user?.email||'',nombre:pendingNombre,createdAt:new Date().toISOString()});
+      if(pendingNombre) S.nombre = pendingNombre;
       if(rol==='admin') await set(ref(db,'config/ownerUid'),uid);
     } else {
       // Primera vez (admin): crear perfil
@@ -543,6 +610,38 @@ async function cargarDatos(uid){
   }catch(e){}
   S.rol = rol;
   S.ownerUid = ownerUid;
+  // Onboarding: solo para admin que se registró solo (sin panel Cifra)
+  if(rol==='admin'){
+    try{
+      const cfgSnap=await get(ref(db,'negocios/'+ownerUid+'/config'));
+      if(!cfgSnap.exists()){
+        // Sin config → onboarding
+        S.onboarding=true;
+        S.onboardingStep=1;
+        S.onboardingData={rubro:'',nombre:'',ruc:'',whatsapp:'',telefono:'',direccion:'',pais:'Perú',departamento:'',provincia:'',distrito:'',añosEnMercado:'',ventasMensuales:'',equipo:{cantidad:'',roles:[]},objetivos:[],modulos:{caja:true,inventario:true,agenda:true,comprobantes:true,entregas:true,ia:false},categorias:[]};
+        render();
+      } else {
+        const _nc=cfgSnap.val();
+        S.negocioConfig=_nc;
+        if(_nc?.nombre) S.config.nombre=_nc.nombre;
+        if(_nc?.ruc) S.config.ruc=_nc.ruc;
+        if(_nc?.telefono) S.config.telefono=_nc.telefono;
+        else if(_nc?.whatsapp) S.config.telefono=_nc.whatsapp;
+        if(_nc?.direccion) S.config.direccion=_nc.direccion;
+        // Si fue creado por admin, saltar onboarding directamente
+        if(_nc?.creadoPorAdmin) S.onboarding=false;
+        // Primera vez: pedir cambio de contraseña
+        if(_nc?.primeraVez===true){S.cambiarPassword=true;}
+        // Tipo de cuenta (prueba / pagado)
+        S.negocioTipo=_nc.tipo||'pagado';
+        S.movimientosUsados=_nc.movimientosUsados||0;
+      }
+    }catch(e){}
+  } else {
+    // Roles no-admin (vendedor, técnico, cajero, etc.): nunca muestran onboarding,
+    // usan directamente el ownerUid del perfil para cargar datos
+    S.onboarding=false;
+  }
   // Si es técnico, solo cargamos entregas del día
   if(rol==='tecnico'){
     onValue(ref(db,'users/'+ownerUid+'/entregas'),snap=>{
@@ -596,8 +695,51 @@ async function cargarDatos(uid){
     const l=[]; snap.forEach(c=>{const v=c.val();if(v)l.push({id:c.key,...v});});
     S.auditLog=l.sort((a,b)=>a.ts<b.ts?1:-1).slice(0,200); render();
   });
+  onValue(ref(db,'negocios/'+p+'/config'),snap=>{
+    if(snap.exists()){
+      S.negocioConfig=snap.val();
+      const nc=S.negocioConfig;
+      if(nc?.nombre) S.config.nombre=nc.nombre;
+      if(nc?.ruc) S.config.ruc=nc.ruc;
+      if(nc?.telefono) S.config.telefono=nc.telefono;
+      else if(nc?.whatsapp) S.config.telefono=nc.whatsapp;
+      if(nc?.direccion) S.config.direccion=nc.direccion;
+      // Actualizar tipo en tiempo real (para cuando admin activa la cuenta)
+      S.negocioTipo=nc.tipo||'pagado';
+      S.movimientosUsados=nc.movimientosUsados||0;
+      // Si pasó a pagado, cerrar el modal de límite
+      if(S.negocioTipo==='pagado') S.showLimiteModal=false;
+      render();
+    }
+  });
 }
 
+function cargarNegociosAdmin(){
+  onValue(ref(db,'admin/negocios'),snap=>{
+    const l=[];
+    snap.forEach(c=>{const v=c.val();if(v)l.push({id:c.key,...v});});
+    S.adminNegocios=l.sort((a,b)=>a.fechaCreacion<b.fechaCreacion?1:-1);
+    render();
+  },(err)=>{
+    // Si admin/negocios no es legible, leer de negocios/* con creadoPorAdmin:true
+    onValue(ref(db,'negocios'),snap=>{
+      const l=[];
+      snap.forEach(uid=>{
+        const cfg=uid.child('config').val();
+        if(cfg&&cfg.creadoPorAdmin){
+          l.push({id:uid.key,nombre:cfg.nombre||'',rubro:cfg.rubro||'',distrito:cfg.distrito||'',adminEmail:cfg.email||'',adminNombre:'',plan:cfg.plan||PLAN_PRECIO,estado:cfg.estado||'activo',fechaCreacion:cfg.fechaCreacion||'',usuarios:[]});
+        }
+      });
+      S.adminNegocios=l.sort((a,b)=>a.fechaCreacion<b.fechaCreacion?1:-1);
+      render();
+    },(e2)=>{console.warn('negocios fallback error:',e2);render();});
+  });
+}
+
+/* ========================================
+   ACCIONES — AUTENTICACIÓN
+   Login, registro, logout y gestión de códigos de invitación
+   ======================================== */
 // ============ ACCIONES ============
 window.doLogin = async()=>{
   const email=document.getElementById('le').value.trim(), pass=document.getElementById('lp').value;
@@ -638,6 +780,8 @@ window.doRegister = async()=>{
     // Guardar rol ANTES de crear cuenta para que cargarDatos lo use cuando onAuthStateChanged dispare
     S._pendingRole = roleAsignado;
     S._pendingOwner = roleAsignado==='admin' ? null : ownerUid;
+    S._pendingNombre = nombre+' '+apellido;
+    S.nombre = nombre+' '+apellido;
     const cred=await createUserWithEmailAndPassword(auth,email,pass);
     const newUid=cred.user.uid;
     const finalOwner=roleAsignado==='admin'?newUid:ownerUid;
@@ -659,6 +803,54 @@ window.doRegister = async()=>{
     S.loading=false;render();
   }
 };
+window.doPruebaRegister = async()=>{
+  const email=(document.getElementById('pr-email')||{value:''}).value.trim();
+  const pass=(document.getElementById('pr-pass')||{value:''}).value;
+  const pass2=(document.getElementById('pr-pass2')||{value:''}).value;
+  if(!email||!pass||!pass2){S.error='Completa todos los campos';render();return;}
+  if(pass!==pass2){S.error='Las contraseñas no coinciden';render();return;}
+  if(pass.length<6){S.error='Mínimo 6 caracteres';render();return;}
+  S.error='';S.loading=true;render();
+  try{
+    const cred=await createUserWithEmailAndPassword(auth,email,pass);
+    const uid=cred.user.uid;
+    const ts=new Date().toISOString();
+    await set(ref(db,'userProfiles/'+uid),{role:'admin',ownerUid:uid,email,nombre:'',createdAt:ts,tipo:'prueba'});
+    await set(ref(db,'config/ownerUid'),uid);
+    // Registrar en panel admin como cuenta prueba
+    const _defMods={caja:true,inventario:true,agenda:true,comprobantes:true,entregas:false,ia:false};
+    try{ await set(ref(db,'admin/negocios/'+uid),{nombre:'(sin configurar)',rubro:'',adminEmail:email,adminNombre:'',plan:0,estado:'activo',tipo:'prueba',movimientosUsados:0,fechaCreacion:ts,modulos:_defMods,usuarios:[{uid,nombre:'',email,rol:'admin',pass:'',tel:'',dni:''}]}); }catch(_){}
+    S.esPrueba=true;
+    S.negocioTipo='prueba';
+    S.movimientosUsados=0;
+    // cargarDatos will be triggered by onAuthStateChanged
+  }catch(e){S.error=tradErr(e.code||'');S.loading=false;render();}
+};
+window.doGoogleAuth = async()=>{
+  S.error='';S.loading=true;render();
+  try{
+    const provider=new GoogleAuthProvider();
+    const cred=await signInWithPopup(auth,provider);
+    const uid=cred.user.uid;
+    const email=cred.user.email||'';
+    const ts=new Date().toISOString();
+    // Only write profile if this is a new user
+    const snap=await get(ref(db,'userProfiles/'+uid));
+    if(!snap.exists()){
+      await set(ref(db,'userProfiles/'+uid),{role:'admin',ownerUid:uid,email,nombre:cred.user.displayName||'',createdAt:ts,tipo:'prueba'});
+      await set(ref(db,'config/ownerUid'),uid);
+      const _defMods={caja:true,inventario:true,agenda:true,comprobantes:true,entregas:false,ia:false};
+      try{ await set(ref(db,'admin/negocios/'+uid),{nombre:'(sin configurar)',rubro:'',adminEmail:email,adminNombre:cred.user.displayName||'',plan:0,estado:'activo',tipo:'prueba',movimientosUsados:0,fechaCreacion:ts,modulos:_defMods,usuarios:[{uid,nombre:cred.user.displayName||'',email,rol:'admin',pass:'',tel:'',dni:''}]}); }catch(_){}
+      S.esPrueba=true;S.negocioTipo='prueba';S.movimientosUsados=0;
+    }
+    // onAuthStateChanged → cargarDatos handles the rest
+  }catch(e){
+    if(e.code!=='auth/popup-closed-by-user')S.error=tradErr(e.code||'');
+    S.loading=false;render();
+  }
+};
+window.setLoginTab = (tab)=>{S.loginTab=tab;S.error='';render();};
+window.cerrarLimiteModal = ()=>{S.showLimiteModal=false;render();};
 window.doLogout = ()=>signOut(auth);
 window.resetPass = async()=>{
   const email=document.getElementById('le')?.value.trim();
@@ -717,6 +909,10 @@ function tradErr(code){
   return m[code]||'Error: '+code;
 }
 
+/* ========================================
+   ACCIONES — MOVIMIENTOS Y CAJA
+   Agregar, editar, eliminar movimientos; citas; exportar PDF y Excel
+   ======================================== */
 // Movimientos
 window.agregarMov = async()=>{
   ['m_fecha','m_cat','m_desc','m_monto','m_comp','m_medio',
@@ -760,8 +956,15 @@ window.agregarMov = async()=>{
       S.editMovId=null;
       S._fc={};S._items=[{desc:'',cat:'Cortinas',cantidad:'1',precioUnit:'',precio:''}];S.showModal=false;S.error='';render();return;
     }
+    // Bloqueo por límite de prueba
+    if(S.negocioTipo==='prueba'&&S.movimientosUsados>=25){S.showLimiteModal=true;render();return;}
     mov.createdAt=new Date().toISOString();
     await set(push(ref(db,'users/'+S.ownerUid+'/movimientos')),mov);
+    // Incrementar contador si es cuenta prueba
+    if(S.negocioTipo==='prueba'){
+      S.movimientosUsados=(S.movimientosUsados||0)+1;
+      update(ref(db,'negocios/'+S.ownerUid+'/config'),{movimientosUsados:S.movimientosUsados}).catch(()=>{});
+    }
     // Auto-registrar cliente si tiene nombre y no existe aún
     if(cliente){
       const existe=S.clientes.find(x=>x.nombre.trim().toLowerCase()===cliente.toLowerCase());
@@ -815,7 +1018,7 @@ window.editarMov = id=>{
     m_fechaEntrega:'', m_horaEntrega:'', m_aCuenta:''
   };
   if(m.items&&m.items.length>0) S._items=m.items.map(it=>({...it, cantidad:it.cantidad||'1', precioUnit:it.precioUnit||String(it.precio||'')}));
-  else S._items=[{desc:m.descripcion||'',cat:m.categoria||CATS_ING[0],cantidad:'1',precioUnit:String(m.monto||''),precio:String(m.monto||'')}];
+  else S._items=[{desc:m.descripcion||'',cat:m.categoria||getCategorias()[0],cantidad:'1',precioUnit:String(m.monto||''),precio:String(m.monto||'')}];
   S.showModal=true; S.modalTipo='movimiento'; S.error=''; render();
 };
 window.setTipoMov = v=>{S.nuevoMov.tipo=v;S._fc={};render();};
@@ -888,6 +1091,10 @@ window.editarCita = (id)=>{
   });
 };
 
+/* ========================================
+   ACCIONES — INVENTARIO Y CLIENTES
+   Productos, salidas, clientes, comprobantes, entregas, cotizaciones y configuración
+   ======================================== */
 // Clientes
 window.agregarCliente = async()=>{
   ['cl_nombre','cl_dni','cl_tel','cl_email','cl_dir','cl_notas'].forEach(id=>{
@@ -1055,7 +1262,7 @@ window.editarSalida = (id)=>{
 
 window.editarProducto = (id)=>{
   const p=S.inventario.find(x=>x.id===id); if(!p) return;
-  const CATS_INV=['Telas','Rieles','Accesorios','Cortinas','Rollers','Stores','Otros'];
+  const CATS_INV=getCategorias();
   const ov=document.createElement('div');
   ov.className='modal-backdrop'; ov.id='_editProdModal';
   ov.innerHTML='<div class="modal" style="max-width:420px">'
@@ -1110,9 +1317,15 @@ window.agregarProducto = async()=>{
 
 // Navegación
 window.ir = (sec,sub)=>{
-  if(sec==='clientes'&&sub==='nuevocliente'){S.seccion='clientes';S.subSeccion='lista';render();setTimeout(()=>openModal('cliente'),50);return;}
-  S.seccion=sec;if(sub)S.subSeccion=sub;render();
-  if(sec==='graficos')setTimeout(crearGraficos,100);
+  const sb=document.querySelector('.sidebar');
+  const isMobOpen=sb&&sb.classList.contains('open');
+  const doNav=()=>{
+    if(sec==='clientes'&&sub==='nuevocliente'){S.seccion='clientes';S.subSeccion='lista';render();setTimeout(()=>openModal('cliente'),50);return;}
+    S.seccion=sec;if(sub)S.subSeccion=sub;render();
+    if(sec==='graficos')setTimeout(crearGraficos,100);
+  };
+  if(isMobOpen){closeSidebar();setTimeout(doNav,280);}
+  else doNav();
 };
 window.openModal = tipo=>{S.showModal=true;S.modalTipo=tipo||'movimiento';S.error='';S._fc={};render();};
 window.closeModal = ()=>{S.showModal=false;S.error='';S.editMovId=null;S._items=[{desc:'',cat:'Cortinas',cantidad:'1',precioUnit:'',precio:''}];render()};
@@ -1548,7 +1761,7 @@ window.editarEntrega = (id)=>{
 // ============ COTIZACIONES ============
 window.nuevaCotizacion = ()=>{
   S.showModal=true; S.modalTipo='cotizacion'; S.error='';
-  S._items=[{desc:'',cat:CATS_ING[0],precio:'',costo:''}]; S._fc={}; render();
+  S._items=[{desc:'',cat:getCategorias()[0],precio:'',costo:''}]; S._fc={}; render();
 };
 window.guardarCotizacion = async()=>{
   ['cot_cliente','cot_fecha','cot_notas','cot_validez'].forEach(id=>{
@@ -1576,7 +1789,7 @@ window.guardarCotizacion = async()=>{
     await set(push(ref(db,'users/'+S.ownerUid+'/cotizaciones')),cotData);
     notif('✅ Cotización guardada');
     auditoria('add_cotizacion','COT · '+cliente+' · '+fmt(total));
-    S.showModal=false; S._fc={}; S._items=[{desc:'',cat:CATS_ING[0],precio:'',costo:''}]; S.error=''; render();
+    S.showModal=false; S._fc={}; S._items=[{desc:'',cat:getCategorias()[0],precio:'',costo:''}]; S.error=''; render();
   }catch(e){S.error='Error al guardar';render();}
 };
 window.cambiarEstadoCot = async(id,estado)=>{
@@ -1631,7 +1844,7 @@ window.convertirAVenta = (id)=>{
     const hent=getTime('_cv_hent');
     const notas=document.getElementById('_cv_notas').value||'';
     const mov={
-      fecha,tipo:'Ingreso',categoria:cot.items[0]?.cat||CATS_ING[0],
+      fecha,tipo:'Ingreso',categoria:cot.items[0]?.cat||getCategorias()[0],
       descripcion:cot.items.map(it=>it.desc).join(' + '),
       monto:cot.total,comprobante:comp,medioPago:medio,
       cliente:cot.cliente,items:cot.items,costoTotal:cot.costoTotal,
@@ -1639,8 +1852,10 @@ window.convertirAVenta = (id)=>{
       cotizacionId:id,createdAt:new Date().toISOString()
     };
     try{
+      if(S.negocioTipo==='prueba'&&S.movimientosUsados>=25){ov.remove();S.showLimiteModal=true;render();return;}
       ov.remove();
       await set(push(ref(db,'users/'+S.ownerUid+'/movimientos')),mov);
+      if(S.negocioTipo==='prueba'){S.movimientosUsados=(S.movimientosUsados||0)+1;update(ref(db,'negocios/'+S.ownerUid+'/config'),{movimientosUsados:S.movimientosUsados}).catch(()=>{});}
       await update(ref(db,'users/'+S.ownerUid+'/cotizaciones/'+id),{estado:'Convertida'});
       // Crear entrega automáticamente si tiene fecha
       if(fent){
@@ -1723,8 +1938,8 @@ function saveMovFields(){
 }
 window.addItem = ()=>{
   if(S.modalTipo==='cotizacion') saveCotFields(); else saveMovFields();
-  if(S.modalTipo==='cotizacion') S._items.push({desc:'',cat:CATS_ING[0],precio:'',costo:''});
-  else S._items.push({desc:'',cat:CATS_ING[0],cantidad:'1',precioUnit:'',precio:''});
+  if(S.modalTipo==='cotizacion') S._items.push({desc:'',cat:getCategorias()[0],precio:'',costo:''});
+  else S._items.push({desc:'',cat:getCategorias()[0],cantidad:'1',precioUnit:'',precio:''});
   render();
   setTimeout(attachModalListeners,30);
 };
@@ -1888,13 +2103,88 @@ window.toggleSidebar = ()=>{
   const ov=document.querySelector('.mob-overlay');
   if(!sb)return;
   const open=sb.classList.toggle('open');
-  if(ov){ov.classList.toggle('show',open);}
+  if(ov) ov.classList.toggle('show',open);
+  document.body.style.overflow=open?'hidden':'';
 };
 window.closeSidebar = ()=>{
   const sb=document.querySelector('.sidebar');
   const ov=document.querySelector('.mob-overlay');
-  if(sb)sb.classList.remove('open');
-  if(ov)ov.classList.remove('show');
+  if(sb) sb.classList.remove('open');
+  if(ov) ov.classList.remove('show');
+  document.body.style.overflow='';
+};
+window.toggleModulo = async function(id){
+  const uid=S.ownerUid||S.user?.uid;
+  if(!uid) return;
+  const current=(S.negocioConfig?.modulos?.[id])!==false;
+  const newVal=!current;
+  if(!S.negocioConfig) S.negocioConfig={modulos:{}};
+  if(!S.negocioConfig.modulos) S.negocioConfig.modulos={};
+  S.negocioConfig.modulos[id]=newVal;
+  render();
+  try{
+    await update(ref(db,'negocios/'+uid+'/config/modulos'),{[id]:newVal});
+    notif(newVal?'✅ Módulo activado':'Módulo desactivado');
+  }catch(e){
+    S.negocioConfig.modulos[id]=current;
+    render();
+    notif('Error al guardar: '+e.message);
+  }
+};
+// --- Gestión de categorías desde Configuración ---
+function _cfgEnsureCats(){
+  if(!S.negocioConfig) S.negocioConfig={};
+  if(!Array.isArray(S.negocioConfig.categorias)) S.negocioConfig.categorias=[...getCategorias()];
+  return S.negocioConfig.categorias;
+}
+
+window.cfgEditarCategoria=function(i){
+  const cats=_cfgEnsureCats();
+  const nuevo=prompt('Editar categoría:',cats[i]);
+  if(nuevo===null) return;
+  const val=nuevo.trim();
+  if(!val){notif('El nombre no puede estar vacío');return;}
+  if(cats.includes(val)&&cats[i]!==val){notif('Esa categoría ya existe');return;}
+  cats[i]=val;render();
+};
+
+window.cfgEliminarCategoria=function(i){
+  const cats=_cfgEnsureCats();
+  if(cats.length<=1){notif('Debe haber al menos una categoría');return;}
+  cats.splice(i,1);render();
+};
+
+window.cfgAgregarCategoria=function(){
+  const inp=document.getElementById('cfg_cat_nueva');
+  const val=(inp?.value||'').trim();
+  if(!val){notif('Escribe el nombre de la categoría');return;}
+  const cats=_cfgEnsureCats();
+  if(cats.includes(val)){notif('Esa categoría ya existe');return;}
+  cats.push(val);render();
+  setTimeout(()=>{const el=document.getElementById('cfg_cat_nueva');if(el)el.value='';},10);
+};
+
+window.cfgGuardarCategorias=async function(){
+  const uid=S.ownerUid||S.user?.uid;
+  if(!uid) return;
+  const cats=getCategorias();
+  try{
+    await update(ref(db,'negocios/'+uid+'/config'),{categorias:cats});
+    notif('✅ Categorías guardadas');
+  }catch(e){notif('Error al guardar: '+e.message);}
+};
+
+window.guardarNombreUsuario = async function(){
+  const val=(document.getElementById('cfg_nombre_usuario')?.value||'').trim();
+  if(!val){notif('Ingresa tu nombre');return;}
+  S.nombre=val;
+  render();
+  try{
+    await update(ref(db,'userProfiles/'+S.user.uid),{nombre:val});
+    notif('✅ Nombre guardado');
+  }catch(e){
+    notif('Error al guardar: '+e.message);
+  }
 };
 window.toggleDark = ()=>{
   S.darkMode=!S.darkMode;
@@ -2005,6 +2295,11 @@ window.render = function(){
   const app=document.getElementById('app');
   if(S.inicializando){app.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8fafc"><div style="text-align:center"><div style="width:44px;height:44px;border:3px solid #dbeafe;border-top-color:#3b82f6;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px"></div><p style="color:#94a3b8;font-size:13px">Cargando Sesko...</p></div></div>';return;}
   if(!S.user){renderLogin();return;}
+  if(S.user.email===SUPER_ADMIN_EMAIL){renderAdminPanel();return;}
+  if(S.passwordExito){renderPasswordExito();return;}
+  if(S.cambiarPassword){renderCambiarPassword();return;}
+  if(S.onboarding){renderOnboarding();return;}
+  if(S.showLimiteModal){renderLimiteModal();return;}
   // Guardar foco y posición del cursor antes de re-renderizar
   const focusedId=document.activeElement?document.activeElement.id:null;
   const focusedSel=document.activeElement&&document.activeElement.selectionStart!=null?document.activeElement.selectionStart:null;
@@ -2138,265 +2433,1576 @@ function attachInventarioListeners(){
   });
 }
 
+/* ========================================
+   RENDER PRINCIPAL — función render() y navegación
+   renderLogin, renderOnboarding, renderApp y toda la lógica de vistas
+   ======================================== */
 function renderLogin(){
-  const isReg=S.esRegistro;
-  const action=isReg?'doRegister':'doLogin';
+  const tab=S.loginTab||'login';
+  const _spin='<span style="width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite;display:inline-block;flex-shrink:0"></span>';
   document.getElementById('app').innerHTML=`
   <style>
-  .lp-wrap{display:flex;min-height:100vh;font-family:'Inter',sans-serif}
-  /* ── LEFT ── */
-  .lp-left{width:52%;background:#07080c;position:relative;overflow:hidden;display:flex;flex-direction:column;padding:40px 44px}
-  .lp-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(61,107,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(61,107,255,.055) 1px,transparent 1px);background-size:44px 44px;pointer-events:none}
-  .lp-glow{position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(61,107,255,.13) 0%,transparent 65%);top:-160px;left:-140px;pointer-events:none}
-  .lp-logo-row{display:flex;align-items:center;gap:11px;position:relative;z-index:2;margin-bottom:5px}
-  .lp-logo-ic{width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .lp-logo-name{font-size:28px;font-weight:800;color:#fff;letter-spacing:-.6px;line-height:1}
-  .lp-logo-name b{color:#3d6bff;font-weight:800}
-  .lp-prod-line{display:flex;align-items:center;gap:10px;position:relative;z-index:2;margin-bottom:36px}
-  .lp-prod-hr{width:24px;height:1px;background:rgba(255,255,255,.2);flex-shrink:0}
-  .lp-prod-txt{font-size:10.5px;color:rgba(255,255,255,.25);letter-spacing:.7px}
-  .lp-hero{position:relative;z-index:2;margin-bottom:32px;margin-top:16px}
-  .lp-headline{font-size:38px;font-weight:900;line-height:1.15;margin-bottom:12px;color:#fff}
-  .lp-headline-blue{color:#5b7fff}
-  .lp-desc{font-size:13px;color:rgba(255,255,255,.4);line-height:1.7;max-width:360px}
-  .lp-feats{display:flex;flex-direction:column;gap:10px;position:relative;z-index:2;margin-bottom:28px}
-  .lp-feat{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 16px}
-  .lp-feat-ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
-  .lp-feat-title{font-size:12.5px;font-weight:700;color:#fff;margin-bottom:2px}
-  .lp-feat-desc{font-size:11px;color:rgba(255,255,255,.38);line-height:1.5}
-  .lp-footer-bar{display:flex;align-items:center;gap:9px;position:relative;z-index:2}
-  .lp-footer-dot{width:7px;height:7px;border-radius:50%;background:#3d6bff;flex-shrink:0}
-  .lp-footer-txt{font-size:10.5px;color:rgba(255,255,255,.22);line-height:1.4}
-  /* ── RIGHT ── */
-  .lp-right{width:48%;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 48px}
-  .lp-form-wrap{width:100%;max-width:350px}
-  .lp-rh{display:flex;align-items:center;gap:10px;margin-bottom:26px}
-  .lp-rh-ic{width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .lp-rh-name{font-size:13px;font-weight:700;color:#0f172a}
-  .lp-rh-sub{font-size:11px;color:#94a3b8;margin-top:1px}
-  .lp-form-title{font-size:23px;font-weight:800;color:#0f172a;margin-bottom:3px}
-  .lp-form-sub{font-size:12.5px;color:#64748b;margin-bottom:20px}
-  .lp-steps{display:flex;align-items:center;background:#f8fafc;border:.5px solid #e2e8f0;border-radius:9px;padding:8px 14px;margin-bottom:22px}
-  .lp-step{display:flex;align-items:center;gap:5px;font-size:11px}
-  .lp-step-dot{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;flex-shrink:0}
-  .lp-step.active .lp-step-dot{background:#3d6bff;color:#fff}
-  .lp-step.done .lp-step-dot{background:#10b981;color:#fff}
-  .lp-step.pending .lp-step-dot{background:#e2e8f0;color:#94a3b8}
-  .lp-step.active span{color:#0f172a;font-weight:600}
-  .lp-step.done span{color:#10b981;font-weight:600}
-  .lp-step.pending span{color:#94a3b8}
-  .lp-step-line{flex:1;height:.5px;background:#e2e8f0;margin:0 8px}
-  .lp-field{margin-bottom:13px}
-  .lp-field label{display:block;font-size:11.5px;font-weight:600;color:#374151;margin-bottom:5px}
-  .lp-input-wrap{position:relative;display:flex;align-items:center}
-  .lp-input-ic{position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;display:flex;align-items:center;color:#b0b9c8}
-  .lp-input{width:100%;padding:9px 34px 9px 34px;border:.5px solid #d1d5db;border-radius:7px;font-size:13px;font-family:'Inter',sans-serif;background:#fff;color:#0f172a;outline:none;transition:border-color .15s,box-shadow .15s;box-sizing:border-box}
-  .lp-input:focus{border-color:#3d6bff;box-shadow:0 0 0 3px rgba(61,107,255,.1)}
-  .lp-input.valid{border-color:#10b981}
-  .lp-input.invalid{border-color:#ef4444}
-  .lp-input-valid{position:absolute;right:10px;font-size:12px;pointer-events:none}
-  .lp-pw-toggle{position:absolute;right:9px;top:50%;transform:translateY(-50%);cursor:pointer;color:#b0b9c8;background:none;border:none;padding:2px;display:flex;align-items:center}
-  .lp-pw-toggle:hover{color:#374151}
-  .lp-pw-toggle svg{width:15px;height:15px}
-  .lp-forgot{text-align:right;margin:-4px 0 13px}
-  .lp-forgot span{font-size:11.5px;color:#3d6bff;cursor:pointer;font-weight:500}
-  .lp-forgot span:hover{text-decoration:underline}
-  .lp-submit{width:100%;padding:11px;border-radius:8px;border:none;background:#3d6bff;color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:background .15s,box-shadow .15s;margin-bottom:14px}
-  .lp-submit:hover:not(:disabled){background:#2d57ef;box-shadow:0 4px 14px rgba(61,107,255,.32)}
-  .lp-submit:disabled{opacity:.65;cursor:not-allowed}
-  .lp-divider{display:flex;align-items:center;gap:10px;margin-bottom:13px;color:#94a3b8;font-size:11px}
-  .lp-divider::before,.lp-divider::after{content:'';flex:1;height:.5px;background:#e2e8f0}
-  .lp-social{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-  .lp-social-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px;border:.5px solid #d1d5db;border-radius:7px;background:#fff;cursor:pointer;font-size:12px;font-weight:500;color:#374151;transition:all .12s;font-family:'Inter',sans-serif}
-  .lp-social-btn:hover{border-color:#3d6bff;color:#2563eb;background:#f4f7ff}
-  .lp-toggle{text-align:center;font-size:12px;color:#64748b;margin-bottom:16px}
-  .lp-toggle span{color:#3d6bff;font-weight:600;cursor:pointer;margin-left:3px}
-  .lp-badges{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
-  .lp-badge{display:flex;align-items:center;gap:3px;font-size:10px;color:#b0b9c8}
-  .lp-badge::before{content:'·';margin-right:1px;opacity:.4}
-  .lp-badge:first-child::before{display:none}
-  .lp-copyright{text-align:center;font-size:10px;color:#d1d5db}
-  .lp-error{background:#fef2f2;border:.5px solid #fecaca;border-radius:7px;padding:9px 12px;font-size:12px;color:#dc2626;margin-bottom:13px;display:flex;align-items:center;gap:7px}
-  @media(max-width:768px){.lp-left{display:none}.lp-right{width:100%;padding:28px 20px}}
+  @keyframes lp-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
+  .lp2-wrap{display:flex;min-height:100vh;font-family:'Inter',sans-serif}
+  .lp2-left{width:42%;min-width:300px;background:#0b0d14;display:flex;flex-direction:column;padding:44px 40px 36px;position:relative;overflow:hidden}
+  .lp2-left-glow{position:absolute;width:320px;height:320px;background:radial-gradient(circle,rgba(37,99,235,.13) 0%,transparent 65%);top:-80px;left:-80px;pointer-events:none}
+  .lp2-logo-row{display:flex;align-items:center;gap:10px;margin-bottom:4px;position:relative;z-index:2}
+  .lp2-logo-name{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.4px}
+  .lp2-logo-name b{color:#3d6bff}
+  .lp2-by{font-size:9.5px;color:rgba(255,255,255,.2);letter-spacing:.7px;text-transform:uppercase;margin-bottom:28px;position:relative;z-index:2}
+  .lp2-mod-title{font-family:monospace;font-size:9.5px;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,.25);text-transform:uppercase;margin-bottom:12px;position:relative;z-index:2}
+  .lp2-mods{display:flex;flex-direction:column;gap:5px;position:relative;z-index:2;margin-bottom:4px}
+  .lp2-mod{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:9px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)}
+  .lp2-mod-ic{font-size:15px;width:24px;text-align:center;flex-shrink:0}
+  .lp2-mod-name{font-size:13px;color:rgba(255,255,255,.7);font-weight:500;flex:1}
+  .lp2-mod-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .lp2-div{height:1px;background:#1e2235;margin:14px 0;position:relative;z-index:2}
+  .lp2-features{display:flex;flex-direction:column;gap:11px;position:relative;z-index:2;flex:1}
+  .lp2-feat{display:flex;align-items:center;gap:9px;font-size:11.5px;color:rgba(255,255,255,.5);line-height:1.5;white-space:nowrap}
+  .lp2-feat strong{color:rgba(255,255,255,.85);font-weight:700}
+  .lp2-feat-check{font-size:11px;flex-shrink:0;margin-top:.5px}
+  .lp2-status{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:18px;position:relative;z-index:2}
+  .lp2-status-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 5px rgba(34,197,94,.6);animation:lp-pulse 2.5s ease-in-out infinite;flex-shrink:0}
+  .lp2-status-txt{font-size:10.5px;color:rgba(255,255,255,.28);font-weight:500}
+  .lp2-right{flex:1;background:#f8fafc;display:flex;align-items:center;justify-content:center;padding:48px 60px}
+  .lp2-card{width:100%;max-width:420px}
+  .lp2-mini-hdr{display:flex;align-items:center;gap:8px;margin-bottom:24px}
+  .lp2-mini-name{font-size:12.5px;font-weight:700;color:#0f172a}
+  .lp2-mini-sub{font-size:11px;color:#94a3b8;margin-top:1px}
+  .lp2-title{font-size:24px;font-weight:800;color:#0f172a;margin-bottom:6px;line-height:1.2}
+  .lp2-title span{color:#2563eb}
+  .lp2-sub{font-size:13px;color:#64748b;margin-bottom:22px;line-height:1.55}
+  .lp2-field{margin-bottom:12px}
+  .lp2-field label{display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:5px;letter-spacing:.2px}
+  .lp2-iw{position:relative;display:flex;align-items:center}
+  .lp2-ic{position:absolute;left:11px;pointer-events:none;color:#cbd5e1;display:flex;align-items:center}
+  .lp2-inp{width:100%;padding:10px 36px 10px 34px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;background:#fff;color:#0f172a;outline:none;transition:border-color .15s,box-shadow .15s;box-sizing:border-box}
+  .lp2-inp:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+  .lp2-eye{position:absolute;right:10px;background:none;border:none;cursor:pointer;color:#cbd5e1;padding:2px;display:flex;align-items:center;transition:color .15s}
+  .lp2-eye:hover{color:#64748b}
+  .lp2-btn{width:100%;padding:14px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s,box-shadow .15s;color:#fff;box-sizing:border-box}
+  .lp2-btn:hover:not(:disabled){opacity:.92}
+  .lp2-btn:disabled{opacity:.6;cursor:not-allowed}
+  .lp2-btn-blue{background:linear-gradient(135deg,#2563eb,#1d4ed8);box-shadow:0 4px 16px rgba(37,99,235,.25)}
+  .lp2-btn-green{background:linear-gradient(135deg,#059669,#047857);box-shadow:0 4px 16px rgba(5,150,105,.2)}
+  .lp2-divider{display:flex;align-items:center;gap:10px;margin:16px 0}
+  .lp2-divider-line{flex:1;height:1px;background:#e2e8f0}
+  .lp2-divider-txt{font-size:11.5px;color:#94a3b8;white-space:nowrap;font-weight:500}
+  .lp2-trial-card{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:14px 16px 16px;margin-bottom:16px}
+  .lp2-trial-top{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .lp2-trial-badge{background:#15803d;color:#fff;font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:20px;letter-spacing:.5px}
+  .lp2-trial-label{font-size:12.5px;font-weight:700;color:#15803d}
+  .lp2-trial-sub{font-size:11.5px;color:#166534;margin-bottom:12px;line-height:1.45}
+  .lp2-footer{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+  .lp2-link{font-size:11.5px;color:#2563eb;cursor:pointer;font-weight:500;background:none;border:none;font-family:'Inter',sans-serif;padding:0}
+  .lp2-link:hover{text-decoration:underline}
+  .lp2-error{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:12px;color:#dc2626;margin-bottom:14px;display:flex;align-items:center;gap:7px}
+  .lp2-copy{text-align:center;font-size:10px;color:#cbd5e1;margin-top:18px}
+  .lp2-back{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#2563eb;background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;padding:0;margin-bottom:20px}
+  .lp2-back:hover{text-decoration:underline}
+  .lp2-g-btn{width:100%;padding:11px 16px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;gap:10px;font-size:13px;font-weight:600;color:#0f172a;cursor:pointer;font-family:'Inter',sans-serif;margin-bottom:14px;transition:border-color .15s,box-shadow .15s;box-sizing:border-box}
+  .lp2-g-btn:hover{border-color:#94a3b8;box-shadow:0 1px 6px rgba(0,0,0,.08)}
+  @media(max-width:700px){.lp2-left{display:none}.lp2-right{padding:28px 20px}}
   </style>
-  <div class="lp-wrap">
-    <!-- ══ LEFT PANEL ══ -->
-    <div class="lp-left">
-      <div class="lp-grid"></div>
-      <div class="lp-glow"></div>
-      <!-- Logo -->
-      <div class="lp-logo-row">
-        <div class="lp-logo-ic">
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="40" height="40" rx="11" fill="#0d1a30"/>
-            <!-- Blue arc: 8-o'clock → 12 → 1-o'clock (upper-left) -->
-            <path d="M 10.5 25.5 A 11 11 0 0 1 25.5 10.5" stroke="#4d7dff" stroke-width="3.8" stroke-linecap="round" fill="none"/>
-            <!-- White arc: 2-o'clock → 6 → 7-o'clock (lower-right) -->
-            <path d="M 29.5 14.5 A 11 11 0 0 1 14.5 29.5" stroke="white" stroke-width="3.8" stroke-linecap="round" fill="none"/>
-            <!-- Center dot -->
-            <circle cx="20" cy="20" r="3.5" fill="#3d6bff"/>
-          </svg>
-        </div>
-        <div class="lp-logo-name">Cifra<b>.</b></div>
+  <div class="lp2-wrap">
+    <div class="lp2-left">
+      <div class="lp2-left-glow"></div>
+      <div class="lp2-logo-row">
+        <svg width="34" height="34" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="11" fill="#0d1a30"/><path d="M10.5 25.5A11 11 0 0 1 25.5 10.5" stroke="#4d7dff" stroke-width="3.8" stroke-linecap="round" fill="none"/><path d="M29.5 14.5A11 11 0 0 1 14.5 29.5" stroke="white" stroke-width="3.8" stroke-linecap="round" fill="none"/><circle cx="20" cy="20" r="3.5" fill="#3d6bff"/></svg>
+        <div class="lp2-logo-name">Sesko<b>.</b></div>
       </div>
-      <!-- Producto line -->
-      <div class="lp-prod-line">
-        <div class="lp-prod-hr"></div>
-        <span class="lp-prod-txt">producto · Sesko</span>
+      <div class="lp2-by">by Cifra</div>
+      <div class="lp2-mod-title">Módulos del sistema</div>
+      <div class="lp2-mods">
+        <div class="lp2-mod"><span class="lp2-mod-ic">💰</span><span class="lp2-mod-name">Caja y finanzas</span><div class="lp2-mod-dot" style="background:#22c55e;box-shadow:0 0 5px rgba(34,197,94,.5)"></div></div>
+        <div class="lp2-mod"><span class="lp2-mod-ic">📦</span><span class="lp2-mod-name">Inventario</span><div class="lp2-mod-dot" style="background:#22c55e;box-shadow:0 0 5px rgba(34,197,94,.5)"></div></div>
+        <div class="lp2-mod"><span class="lp2-mod-ic">📅</span><span class="lp2-mod-name">Agenda y citas</span><div class="lp2-mod-dot" style="background:#22c55e;box-shadow:0 0 5px rgba(34,197,94,.5)"></div></div>
+        <div class="lp2-mod"><span class="lp2-mod-ic">🚚</span><span class="lp2-mod-name">Entregas</span><div class="lp2-mod-dot" style="background:#22c55e;box-shadow:0 0 5px rgba(34,197,94,.5)"></div></div>
+        <div class="lp2-mod"><span class="lp2-mod-ic">🧾</span><span class="lp2-mod-name">Comprobantes</span><div class="lp2-mod-dot" style="background:#22c55e;box-shadow:0 0 5px rgba(34,197,94,.5)"></div></div>
+        <div class="lp2-mod"><span class="lp2-mod-ic">🤖</span><span class="lp2-mod-name">Asistente IA</span><div class="lp2-mod-dot" style="background:#3b82f6;box-shadow:0 0 5px rgba(59,130,246,.5)"></div></div>
       </div>
-      <!-- Hero -->
-      <div class="lp-hero">
-        <div class="lp-headline">
-          Gestiona tu negocio<br>
-          <span class="lp-headline-blue">sin complicaciones</span>
-        </div>
-        <p class="lp-desc">Todo lo que necesitas para administrar ventas, clientes, entregas e inventario en un solo lugar.</p>
+      <div class="lp2-div"></div>
+      <div class="lp2-features">
+        <div class="lp2-feat"><span class="lp2-feat-check">✅</span><span><strong style="color:rgba(255,255,255,.82)">Tiempo real</strong> — ingresos al instante</span></div>
+        <div class="lp2-feat"><span class="lp2-feat-check">✅</span><span><strong style="color:rgba(255,255,255,.82)">Sin Excel</strong> — todo automático</span></div>
+        <div class="lp2-feat"><span class="lp2-feat-check">✅</span><span><strong style="color:rgba(255,255,255,.82)">Desde el cel</strong> — app instalable</span></div>
+        <div class="lp2-feat"><span class="lp2-feat-check">✅</span><span><strong style="color:rgba(255,255,255,.82)">IA incluida</strong> — análisis mensual</span></div>
       </div>
-      <!-- Features -->
-      <div class="lp-feats">
-        <div class="lp-feat">
-          <div class="lp-feat-ic" style="background:rgba(59,130,246,.18)">💰</div>
-          <div>
-            <div class="lp-feat-title">Control de ingresos en tiempo real</div>
-            <div class="lp-feat-desc">Registra ventas, egresos y comprobantes al instante</div>
-          </div>
-        </div>
-        <div class="lp-feat">
-          <div class="lp-feat-ic" style="background:rgba(16,185,129,.18)">📦</div>
-          <div>
-            <div class="lp-feat-title">Entregas y agenda integradas</div>
-            <div class="lp-feat-desc">Nunca pierdas una cita ni una entrega pendiente</div>
-          </div>
-        </div>
-        <div class="lp-feat">
-          <div class="lp-feat-ic" style="background:rgba(139,92,246,.18)">🤖</div>
-          <div>
-            <div class="lp-feat-title">Asistente IA incluido</div>
-            <div class="lp-feat-desc">Análisis automático del negocio con inteligencia artificial</div>
-          </div>
-        </div>
-      </div>
-      <!-- Footer bar -->
-      <div class="lp-footer-bar">
-        <div class="lp-footer-dot"></div>
-        <span class="lp-footer-txt">Plataforma desarrollada por Cifra — Sistema de gestión para MYPEs en Lima</span>
+      <div class="lp2-status">
+        <div class="lp2-status-dot"></div>
+        <span class="lp2-status-txt">Todos los servicios operativos</span>
       </div>
     </div>
-
-    <!-- ══ RIGHT PANEL ══ -->
-    <div class="lp-right">
-      <div class="lp-form-wrap">
-        <!-- Header -->
-        <div class="lp-rh">
-          <div class="lp-rh-ic">
-            <svg width="26" height="26" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="40" height="40" rx="11" fill="#0d1a30"/>
-              <path d="M 10.5 25.5 A 11 11 0 0 1 25.5 10.5" stroke="#4d7dff" stroke-width="3.8" stroke-linecap="round" fill="none"/>
-              <path d="M 29.5 14.5 A 11 11 0 0 1 14.5 29.5" stroke="white" stroke-width="3.8" stroke-linecap="round" fill="none"/>
-              <circle cx="20" cy="20" r="3.5" fill="#3d6bff"/>
-            </svg>
-          </div>
+    <div class="lp2-right">
+      <div class="lp2-card">
+        <div class="lp2-mini-hdr">
+          <svg width="24" height="24" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="11" fill="#0d1a30"/><path d="M10.5 25.5A11 11 0 0 1 25.5 10.5" stroke="#4d7dff" stroke-width="3.8" stroke-linecap="round" fill="none"/><path d="M29.5 14.5A11 11 0 0 1 14.5 29.5" stroke="white" stroke-width="3.8" stroke-linecap="round" fill="none"/><circle cx="20" cy="20" r="3.5" fill="#3d6bff"/></svg>
           <div>
-            <div class="lp-rh-name">Cifra — Sesko</div>
-            <div class="lp-rh-sub">Sistema de gestión para tu negocio</div>
+            <div class="lp2-mini-name">Sesko — Cifra</div>
+            <div class="lp2-mini-sub">Sistema de gestión empresarial</div>
           </div>
         </div>
-        <div class="lp-form-title">${isReg?'Crear cuenta':'Bienvenido de vuelta'}</div>
-        <div class="lp-form-sub">${isReg?'Completa los datos para acceder a Sesko':'Ingresa tus credenciales para continuar'}</div>
-        <!-- Steps -->
-        <div class="lp-steps">
-          <div class="lp-step active"><div class="lp-step-dot">1</div><span>${isReg?'Datos':'Acceso'}</span></div>
-          <div class="lp-step-line"></div>
-          <div class="lp-step ${isReg?'pending':'done'}"><div class="lp-step-dot">${isReg?'2':'✓'}</div><span>${isReg?'Verificar':'Autenticado'}</span></div>
-          <div class="lp-step-line"></div>
-          <div class="lp-step pending"><div class="lp-step-dot">3</div><span>Dashboard</span></div>
-        </div>
-        ${S.error?`<div class="lp-error">⚠️ ${S.error}</div>`:''}
-        ${isReg?
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:4px">'
-        +'<div class="lp-field" style="margin-bottom:0"><label>Nombre</label>'
-        +'<div class="lp-input-wrap">'
-        +'<span class="lp-input-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></span>'
-        +'<input class="lp-input" type="text" id="lnombre" placeholder="Tu nombre" autocomplete="given-name"'
-        +' oninput="this.className=\'lp-input \'+(this.value.trim().length>=2?\'valid\':\'invalid\')">'
-        +'</div></div>'
-        +'<div class="lp-field" style="margin-bottom:0"><label>Apellido</label>'
-        +'<div class="lp-input-wrap">'
-        +'<span class="lp-input-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></span>'
-        +'<input class="lp-input" type="text" id="lapellido" placeholder="Tu apellido" autocomplete="family-name"'
-        +' oninput="this.className=\'lp-input \'+(this.value.trim().length>=2?\'valid\':\'invalid\')">'
-        +'</div></div>'
-        +'</div>'
-        :''}
-        <!-- Email -->
-        <div class="lp-field">
+        ${tab==='login'?`
+        <div class="lp2-title">Bienvenido a <span>Sesko</span> 👋</div>
+        <div class="lp2-sub">Gestiona tu negocio de forma inteligente. Todo en un solo lugar.</div>
+        ${S.error?`<div class="lp2-error">⚠️ ${S.error}</div>`:''}
+        <div class="lp2-field">
           <label>Correo electrónico</label>
-          <div class="lp-input-wrap">
-            <span class="lp-input-ic">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8l10 6 10-6"/></svg>
-            </span>
-            <input class="lp-input" type="email" id="le" placeholder="tu@email.com" autocomplete="email"
-              onkeydown="if(event.key==='Enter')${action}()"
-              oninput="const v=this.value;const ok=/^[^@]+@[^@]+\\.[^@]+$/.test(v);this.className='lp-input '+(v?ok?'valid':'invalid':'');document.getElementById('le-ic').textContent=v?ok?'✓':''">
-            <span id="le-ic" class="lp-input-valid" style="color:#10b981;font-weight:700"></span>
+          <div class="lp2-iw">
+            <span class="lp2-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8l10 6 10-6"/></svg></span>
+            <input class="lp2-inp" type="email" id="le" placeholder="tu@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')doLogin()">
           </div>
         </div>
-        <!-- Password -->
-        <div class="lp-field">
+        <div class="lp2-field" style="margin-bottom:6px">
           <label>Contraseña</label>
-          <div class="lp-input-wrap">
-            <span class="lp-input-ic">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            </span>
-            <input class="lp-input" type="password" id="lp" placeholder="Mínimo 6 caracteres" autocomplete="current-password"
-              onkeydown="if(event.key==='Enter')${action}()"
-              oninput="const v=this.value;const ok=v.length>=6;this.className='lp-input '+(v?ok?'valid':'invalid':'')">
-            <button class="lp-pw-toggle" type="button" onclick="const i=document.getElementById('lp');i.type=i.type==='password'?'text':'password';this.innerHTML=i.type==='password'?'<svg width=\\'15\\' height=\\'15\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'2\\' stroke-linecap=\\'round\\'><path d=\\'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z\\'/><circle cx=\\'12\\' cy=\\'12\\' r=\\'3\\'/></svg>':'<svg width=\\'15\\' height=\\'15\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'2\\' stroke-linecap=\\'round\\'><path d=\\'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24\\'/><line x1=\\'1\\' y1=\\'1\\' x2=\\'23\\' y2=\\'23\\'/></svg>'">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
+          <div class="lp2-iw">
+            <span class="lp2-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+            <input class="lp2-inp" type="password" id="lp" placeholder="Tu contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+            <button class="lp2-eye" type="button" onclick="const i=document.getElementById('lp');i.type=i.type==='password'?'text':'password'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
         </div>
-        ${isReg?`
-        <div class="lp-field">
-          <label>Confirmar contraseña</label>
-          <div class="lp-input-wrap">
-            <span class="lp-input-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-            <input class="lp-input" type="password" id="lp2" placeholder="Repite tu contraseña"
-              oninput="const v=this.value;const ok=v===document.getElementById('lp').value&&v.length>=6;this.className='lp-input '+(v?ok?'valid':'invalid':'');document.getElementById('lp2-ic').textContent=v?ok?'✓':''">
-            <span id="lp2-ic" class="lp-input-valid" style="color:#10b981;font-weight:700"></span>
-          </div>
-        </div>
-        <div class="lp-field">
-          <label>Código de invitación</label>
-          <div class="lp-input-wrap">
-            <span class="lp-input-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>
-            <input class="lp-input" type="text" id="lcod" placeholder="Ingresa el código" style="text-transform:uppercase;letter-spacing:3px">
-          </div>
-        </div>`:''}
-        ${!isReg?`<div class="lp-forgot"><span onclick="resetPass()">¿Olvidaste tu contraseña?</span></div>`:''}
-        <!-- Submit -->
-        <button class="lp-submit" id="lp-submit-btn" onclick="${action}()" ${S.loading?'disabled':''}>
-          ${S.loading
-            ?'<span style="display:flex;align-items:center;justify-content:center;gap:8px"><span style="width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite;display:inline-block"></span>Verificando...</span>'
-            :isReg?'🚀 Crear cuenta':'→ Ingresar al sistema'}
+        <button class="lp2-btn lp2-btn-blue" onclick="doLogin()" ${S.loading?'disabled':''} style="margin-bottom:0">
+          ${S.loading?`${_spin}Verificando...`:'Ingresar al sistema →'}
         </button>
-        <!-- Toggle -->
-        <div class="lp-toggle">
-          ${isReg?'¿Ya tienes cuenta?':'¿No tienes cuenta?'}
-          <span onclick="toggleModo()">${isReg?'Ingresar':'Registrarse'}</span>
+        <div class="lp2-footer">
+          <button class="lp2-link" onclick="resetPass()">¿Olvidaste tu contraseña?</button>
+          <span style="font-size:11.5px;color:#94a3b8">Soporte · 982 287 999</span>
         </div>
-        <!-- Trust badges -->
-        <div class="lp-badges">
-          <span class="lp-badge">🔒 SSL seguro</span>
-          <span class="lp-badge">🔥 Firebase</span>
-          <span class="lp-badge">🚫 Sin anuncios</span>
-          <span class="lp-badge">☁️ En la nube</span>
+        <div class="lp2-divider">
+          <div class="lp2-divider-line"></div>
+          <span class="lp2-divider-txt">¿Primera vez en Sesko?</span>
+          <div class="lp2-divider-line"></div>
         </div>
-        <div class="lp-copyright">Desarrollado por Cifra &nbsp;·&nbsp; © 2026</div>
+        <div class="lp2-trial-card">
+          <div class="lp2-trial-top">
+            <span class="lp2-trial-badge">⚡ GRATIS</span>
+            <span class="lp2-trial-label">25 movimientos sin tarjeta</span>
+          </div>
+          <div class="lp2-trial-sub">Prueba todas las funciones de Sesko sin compromiso</div>
+          <button class="lp2-btn lp2-btn-green" onclick="setLoginTab('prueba')">Empezar prueba gratis →</button>
+        </div>
+        `:`
+        <button class="lp2-back" onclick="setLoginTab('login')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          Volver al inicio de sesión
+        </button>
+        <div class="lp2-title" style="font-size:20px">Empieza gratis</div>
+        <div class="lp2-sub" style="margin-bottom:16px">25 movimientos sin costo · Sin tarjeta de crédito</div>
+        <button class="lp2-g-btn" onclick="doGoogleAuth()" ${S.loading?'disabled':''}>
+          <svg width="17" height="17" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.8l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+          Continuar con Google
+        </button>
+        <div class="lp2-divider">
+          <div class="lp2-divider-line"></div>
+          <span class="lp2-divider-txt">o regístrate con correo</span>
+          <div class="lp2-divider-line"></div>
+        </div>
+        ${S.error?`<div class="lp2-error">⚠️ ${S.error}</div>`:''}
+        <div class="lp2-field">
+          <label>Correo electrónico</label>
+          <div class="lp2-iw">
+            <span class="lp2-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8l10 6 10-6"/></svg></span>
+            <input class="lp2-inp" type="email" id="pr-email" placeholder="tu@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')doPruebaRegister()">
+          </div>
+        </div>
+        <div class="lp2-field">
+          <label>Contraseña</label>
+          <div class="lp2-iw">
+            <span class="lp2-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+            <input class="lp2-inp" type="password" id="pr-pass" placeholder="Mínimo 6 caracteres">
+            <button class="lp2-eye" type="button" onclick="const i=document.getElementById('pr-pass');i.type=i.type==='password'?'text':'password'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          </div>
+        </div>
+        <div class="lp2-field">
+          <label>Confirmar contraseña</label>
+          <div class="lp2-iw">
+            <span class="lp2-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+            <input class="lp2-inp" type="password" id="pr-pass2" placeholder="Repite tu contraseña" onkeydown="if(event.key==='Enter')doPruebaRegister()">
+          </div>
+        </div>
+        <button class="lp2-btn lp2-btn-green" onclick="doPruebaRegister()" ${S.loading?'disabled':''} style="margin-bottom:12px">
+          ${S.loading?`${_spin}Creando cuenta...`:'Crear cuenta gratis →'}
+        </button>
+        <div style="text-align:center">
+          <button class="lp2-link" onclick="setLoginTab('login')">¿Ya tienes cuenta? Ingresar →</button>
+        </div>
+        `}
+        <div class="lp2-copy">Desarrollado por Cifra &nbsp;·&nbsp; © 2026</div>
       </div>
     </div>
   </div>`;
 }
+
+// ============ CAMBIAR CONTRASEÑA (PRIMERA VEZ) ============
+function renderCambiarPassword(){
+  const app=document.getElementById('app');
+  const nombre=S.nombre||S.user?.email?.split('@')[0]||'Usuario';
+  const email=S.user?.email||'';
+  const negocio=S.negocioConfig?.nombre||S.config?.nombre||'Tu negocio';
+  const rol=S.rol||'admin';
+  const rolLabel={admin:'Administrador',vendedor:'Vendedor',tecnico:'Técnico',cajero:'Cajero'}[rol]||rol;
+  app.innerHTML=`
+  <style>
+  .cp-wrap{display:flex;min-height:100vh;font-family:'Inter',sans-serif;background:#f8fafc}
+  .cp-left{width:42%;background:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 44px;position:relative;overflow:hidden}
+  .cp-left-glow{position:absolute;width:400px;height:400px;background:radial-gradient(circle,rgba(99,102,241,.15) 0%,transparent 70%);top:-100px;left:-100px;pointer-events:none}
+  .cp-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:#fff;margin-bottom:20px;flex-shrink:0}
+  .cp-user-name{font-size:22px;font-weight:800;color:#fff;margin-bottom:4px;text-align:center}
+  .cp-user-email{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:24px;text-align:center}
+  .cp-user-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:16px 20px;width:100%;margin-bottom:20px}
+  .cp-user-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .cp-user-row:last-child{margin-bottom:0}
+  .cp-user-lbl{font-size:11px;color:rgba(255,255,255,.35);font-weight:500}
+  .cp-user-val{font-size:12px;color:rgba(255,255,255,.75);font-weight:600}
+  .cp-badge{background:rgba(99,102,241,.25);color:#a5b4fc;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;letter-spacing:.4px}
+  .cp-info{font-size:11.5px;color:rgba(255,255,255,.3);text-align:center;line-height:1.6;max-width:280px}
+  .cp-right{width:58%;display:flex;align-items:center;justify-content:center;padding:40px 56px}
+  .cp-form{width:100%;max-width:420px}
+  .cp-form-header{margin-bottom:28px}
+  .cp-form-title{font-size:26px;font-weight:800;color:#0f172a;margin-bottom:6px}
+  .cp-form-sub{font-size:13.5px;color:#64748b;line-height:1.5}
+  .cp-field{margin-bottom:16px}
+  .cp-field label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px}
+  .cp-input-wrap{position:relative;display:flex;align-items:center}
+  .cp-input{width:100%;padding:11px 42px 11px 14px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13.5px;font-family:'Inter',sans-serif;background:#fff;color:#0f172a;outline:none;transition:border-color .15s,box-shadow .15s;box-sizing:border-box}
+  .cp-input:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+  .cp-input.valid{border-color:#10b981}
+  .cp-input.invalid{border-color:#ef4444}
+  .cp-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;color:#94a3b8;background:none;border:none;padding:0;display:flex}
+  .cp-eye:hover{color:#374151}
+  .cp-strength{height:4px;border-radius:2px;background:#e2e8f0;margin-top:8px;overflow:hidden}
+  .cp-strength-bar{height:100%;border-radius:2px;transition:width .3s,background .3s}
+  .cp-strength-label{font-size:11px;margin-top:4px;font-weight:500}
+  .cp-reqs{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:10px;margin-bottom:4px}
+  .cp-req{display:flex;align-items:center;gap:5px;font-size:11.5px;color:#94a3b8}
+  .cp-req.ok{color:#10b981}
+  .cp-req-dot{width:6px;height:6px;border-radius:50%;background:#d1d5db;flex-shrink:0}
+  .cp-req.ok .cp-req-dot{background:#10b981}
+  .cp-btn{width:100%;padding:13px;border-radius:9px;border:none;background:#6366f1;color:#fff;font-size:14.5px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:background .15s,box-shadow .15s;margin-top:8px}
+  .cp-btn:hover:not(:disabled){background:#4f46e5;box-shadow:0 4px 16px rgba(99,102,241,.35)}
+  .cp-btn:disabled{opacity:.65;cursor:not-allowed}
+  .cp-err{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;font-size:12.5px;color:#dc2626;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  @media(max-width:768px){.cp-wrap{flex-direction:column}.cp-left{width:100%;padding:32px 24px}.cp-right{width:100%;padding:24px 20px}}
+  </style>
+  <div class="cp-wrap">
+    <div class="cp-left">
+      <div class="cp-left-glow"></div>
+      <div class="cp-avatar">${nombre[0].toUpperCase()}</div>
+      <div class="cp-user-name">${nombre}</div>
+      <div class="cp-user-email">${email}</div>
+      <div class="cp-user-card">
+        <div class="cp-user-row">
+          <span class="cp-user-lbl">Negocio</span>
+          <span class="cp-user-val">${negocio}</span>
+        </div>
+        <div class="cp-user-row">
+          <span class="cp-user-lbl">Rol</span>
+          <span class="cp-badge">${rolLabel.toUpperCase()}</span>
+        </div>
+        <div class="cp-user-row">
+          <span class="cp-user-lbl">Estado</span>
+          <span style="font-size:11px;color:#22c55e;font-weight:600">● Activo</span>
+        </div>
+      </div>
+      <p class="cp-info">Este paso es obligatorio. Tu contraseña anterior solo sirve para este primer ingreso.</p>
+    </div>
+    <div class="cp-right">
+      <div class="cp-form">
+        <div class="cp-form-header">
+          <div class="cp-form-title">Crea tu contraseña</div>
+          <div class="cp-form-sub">Elige una contraseña segura que usarás de ahora en adelante para acceder.</div>
+        </div>
+        <div id="cp-err-box" style="display:none" class="cp-err"></div>
+        <div class="cp-field">
+          <label>Nueva contraseña</label>
+          <div class="cp-input-wrap">
+            <input class="cp-input" type="password" id="cp-pw1" placeholder="Mínimo 8 caracteres"
+              oninput="cpCheckStrength()">
+            <button class="cp-eye" type="button" onclick="const i=document.getElementById('cp-pw1');i.type=i.type==='password'?'text':'password'">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div class="cp-strength"><div id="cp-str-bar" class="cp-strength-bar" style="width:0%"></div></div>
+          <div id="cp-str-label" class="cp-strength-label" style="color:#94a3b8"></div>
+          <div class="cp-reqs">
+            <div class="cp-req" id="req-len"><div class="cp-req-dot"></div>Mínimo 8 caracteres</div>
+            <div class="cp-req" id="req-upper"><div class="cp-req-dot"></div>Una mayúscula</div>
+            <div class="cp-req" id="req-num"><div class="cp-req-dot"></div>Un número</div>
+            <div class="cp-req" id="req-special"><div class="cp-req-dot"></div>Un símbolo</div>
+          </div>
+        </div>
+        <div class="cp-field">
+          <label>Confirmar contraseña</label>
+          <div class="cp-input-wrap">
+            <input class="cp-input" type="password" id="cp-pw2" placeholder="Repite tu contraseña"
+              oninput="cpCheckMatch()">
+            <button class="cp-eye" type="button" onclick="const i=document.getElementById('cp-pw2');i.type=i.type==='password'?'text':'password'">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="cp-btn" id="cp-submit-btn" onclick="doSetPassword()">Guardar y continuar →</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderLimiteModal(){
+  const app=document.getElementById('app');
+  const waMsg=encodeURIComponent('Hola, quiero activar mi cuenta de Sesko. Mi correo es '+(S.user?.email||''));
+  const waUrl='https://wa.me/51982287999?text='+waMsg;
+  app.innerHTML=`
+  <style>
+  .lm-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.85);backdrop-filter:blur(4px);font-family:'Inter',sans-serif;padding:24px}
+  .lm-card{background:#fff;border-radius:20px;padding:44px 40px;max-width:480px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .lm-icon{font-size:52px;margin-bottom:16px}
+  .lm-title{font-size:24px;font-weight:800;color:#0f172a;margin-bottom:8px}
+  .lm-sub{font-size:14px;color:#64748b;margin-bottom:24px;line-height:1.6}
+  .lm-perks{text-align:left;display:flex;flex-direction:column;gap:8px;background:#f8fafc;border-radius:12px;padding:16px 20px;margin-bottom:24px}
+  .lm-perk{display:flex;align-items:center;gap:10px;font-size:13px;color:#374151}
+  .lm-perk-dot{width:18px;height:18px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+  .lm-price{font-size:13px;color:#64748b;margin-bottom:20px}
+  .lm-price strong{font-size:22px;color:#0f172a;font-weight:800}
+  .lm-btn-wa{display:block;width:100%;padding:14px;border-radius:10px;border:none;background:#25d366;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;margin-bottom:10px;text-decoration:none;box-sizing:border-box}
+  .lm-btn-wa:hover{background:#1fb85a}
+  .lm-link{font-size:12.5px;color:#94a3b8;cursor:pointer;text-decoration:underline}
+  .lm-link:hover{color:#64748b}
+  </style>
+  <div class="lm-wrap">
+    <div class="lm-card">
+      <div class="lm-icon">🔒</div>
+      <div class="lm-title">Llegaste al límite de tu prueba</div>
+      <div class="lm-sub">Usaste los 25 movimientos gratuitos. Activa tu cuenta para continuar sin límites.</div>
+      <div class="lm-perks">
+        ${['Movimientos ilimitados','Agenda y citas desbloqueada','Cotizaciones desbloqueadas','Análisis mensual con IA','Hasta 2 usuarios con roles','Reportes PDF automáticos','Soporte directo por WhatsApp','Reunión mensual de revisión'].map(p=>`
+        <div class="lm-perk"><div class="lm-perk-dot">✓</div>${p}</div>`).join('')}
+      </div>
+      <div class="lm-price"><strong>S/ 299</strong> / mes</div>
+      <a href="${waUrl}" target="_blank" class="lm-btn-wa">📱 Hablar con Cifra por WhatsApp</a>
+      <span class="lm-link" onclick="cerrarLimiteModal()">Seguir viendo mis datos</span>
+    </div>
+  </div>`;
+}
+
+function renderPasswordExito(){
+  const app=document.getElementById('app');
+  const nombre=S.nombre||S.user?.email?.split('@')[0]||'Usuario';
+  const negocio=S.negocioConfig?.nombre||S.config?.nombre||'Tu negocio';
+  const rol=S.rol||'admin';
+  const rolLabel={admin:'Administrador',vendedor:'Vendedor',tecnico:'Técnico',cajero:'Cajero'}[rol]||rol;
+  app.innerHTML=`
+  <style>
+  .pe-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8fafc;font-family:'Inter',sans-serif;padding:24px}
+  .pe-card{background:#fff;border-radius:20px;padding:52px 44px;max-width:440px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.08)}
+  .pe-check{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;box-shadow:0 6px 20px rgba(34,197,94,.3)}
+  .pe-title{font-size:26px;font-weight:800;color:#0f172a;margin-bottom:10px}
+  .pe-sub{font-size:14px;color:#64748b;line-height:1.6;margin-bottom:28px}
+  .pe-info{display:flex;flex-direction:column;gap:8px;background:#f8fafc;border-radius:12px;padding:16px 20px;margin-bottom:28px;text-align:left}
+  .pe-info-row{display:flex;align-items:center;justify-content:space-between}
+  .pe-info-lbl{font-size:11.5px;color:#94a3b8;font-weight:500}
+  .pe-info-val{font-size:12.5px;color:#0f172a;font-weight:700}
+  .pe-btn{display:block;width:100%;padding:13px;border-radius:9px;border:none;background:#3d6bff;color:#fff;font-size:14.5px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:background .15s,box-shadow .15s;margin-bottom:12px;text-decoration:none}
+  .pe-btn:hover{background:#2d57ef;box-shadow:0 4px 16px rgba(61,107,255,.32)}
+  .pe-wa{font-size:12px;color:#64748b}
+  .pe-wa a{color:#25d366;font-weight:600;text-decoration:none}
+  .pe-wa a:hover{text-decoration:underline}
+  </style>
+  <div class="pe-wrap">
+    <div class="pe-card">
+      <div class="pe-check">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="pe-title">¡Tu cuenta está lista!</div>
+      <div class="pe-sub">Ya puedes usar Sesko con tu nueva contraseña. Guárdala en un lugar seguro.</div>
+      <div class="pe-info">
+        <div class="pe-info-row">
+          <span class="pe-info-lbl">Negocio</span>
+          <span class="pe-info-val">${negocio}</span>
+        </div>
+        <div class="pe-info-row">
+          <span class="pe-info-lbl">Usuario</span>
+          <span class="pe-info-val">${nombre}</span>
+        </div>
+        <div class="pe-info-row">
+          <span class="pe-info-lbl">Rol</span>
+          <span class="pe-info-val">${rolLabel}</span>
+        </div>
+      </div>
+      <button class="pe-btn" onclick="irAlDashboard()">Ir a mi dashboard →</button>
+      <div class="pe-wa">¿Necesitas ayuda? <a href="https://wa.me/${CIFRA_WHATSAPP}" target="_blank">Escríbenos por WhatsApp</a></div>
+    </div>
+  </div>`;
+}
+
+window.cpCheckStrength=function(){
+  const v=document.getElementById('cp-pw1').value;
+  const reqs={len:v.length>=8,upper:/[A-Z]/.test(v),num:/[0-9]/.test(v),special:/[^A-Za-z0-9]/.test(v)};
+  document.getElementById('req-len').className='cp-req'+(reqs.len?' ok':'');
+  document.getElementById('req-upper').className='cp-req'+(reqs.upper?' ok':'');
+  document.getElementById('req-num').className='cp-req'+(reqs.num?' ok':'');
+  document.getElementById('req-special').className='cp-req'+(reqs.special?' ok':'');
+  const score=Object.values(reqs).filter(Boolean).length;
+  const bar=document.getElementById('cp-str-bar');
+  const lbl=document.getElementById('cp-str-label');
+  const cfg=[
+    {w:'0%',bg:'#e2e8f0',txt:''},
+    {w:'25%',bg:'#ef4444',txt:'Muy débil'},
+    {w:'50%',bg:'#f59e0b',txt:'Débil'},
+    {w:'75%',bg:'#3b82f6',txt:'Buena'},
+    {w:'100%',bg:'#22c55e',txt:'Fuerte'},
+  ][score];
+  bar.style.width=cfg.w; bar.style.background=cfg.bg;
+  lbl.textContent=cfg.txt; lbl.style.color=cfg.bg;
+  const i=document.getElementById('cp-pw1');
+  i.className='cp-input'+(v?(score>=3?' valid':' invalid'):'');
+  cpCheckMatch();
+};
+
+window.cpCheckMatch=function(){
+  const v1=document.getElementById('cp-pw1')?.value||'';
+  const v2=document.getElementById('cp-pw2')?.value||'';
+  const i=document.getElementById('cp-pw2');
+  if(!i) return;
+  if(!v2) i.className='cp-input';
+  else i.className='cp-input'+(v2===v1?' valid':' invalid');
+};
+
+window.doSetPassword=async function(){
+  const pw1=document.getElementById('cp-pw1')?.value||'';
+  const pw2=document.getElementById('cp-pw2')?.value||'';
+  const errBox=document.getElementById('cp-err-box');
+  const btn=document.getElementById('cp-submit-btn');
+  const showErr=msg=>{errBox.textContent='⚠️ '+msg;errBox.style.display='flex';};
+  if(pw1.length<8){showErr('La contraseña debe tener al menos 8 caracteres.');return;}
+  if(pw1!==pw2){showErr('Las contraseñas no coinciden.');return;}
+  errBox.style.display='none';
+  btn.disabled=true;
+  btn.textContent='Guardando...';
+  try{
+    await updatePassword(S.user, pw1);
+    // Marcar primeraVez=false en userProfile y en config del negocio
+    const uid=S.user.uid;
+    const ownerUid=S.ownerUid||uid;
+    try{ await update(ref(db,'userProfiles/'+uid),{primeraVez:false}); }catch(e){}
+    if(S.rol==='admin'||ownerUid===uid){
+      try{ await update(ref(db,'negocios/'+ownerUid+'/config'),{primeraVez:false}); }catch(e){}
+    }
+    S.cambiarPassword=false;
+    S.passwordExito=true;
+    render();
+  }catch(e){
+    btn.disabled=false;
+    btn.textContent='Guardar y continuar →';
+    const msgs={
+      'auth/requires-recent-login':'Tu sesión expiró. Cierra sesión, vuelve a ingresar y repite este paso.',
+      'auth/weak-password':'La contraseña es demasiado débil. Usa al menos 8 caracteres.',
+    };
+    showErr(msgs[e.code]||'Error al guardar: '+e.message);
+  }
+};
+
+window.irAlDashboard=function(){
+  S.passwordExito=false;
+  S.cambiarPassword=false;
+  render();
+};
+
+
+// ============ ONBOARDING ============
+function applyRubroPreset(rubroId){
+  const p=OB_PRESETS[rubroId]||OB_PRESETS.otro;
+  S.onboardingData.modulos={...p};
+  S.onboardingData.categorias=[...(OB_CAT_PRESETS[rubroId]||OB_CAT_PRESETS.otro)];
+}
+function getCategorias(){
+  const cats=S.negocioConfig?.categorias;
+  if(Array.isArray(cats)&&cats.length>0) return cats;
+  return ['Productos','Servicios','Otros'];
+}
+
+/* ========================================
+   PANEL DE ADMINISTRACIÓN SUPER-ADMIN
+   renderAdminPanel y handlers window.admin*
+   ======================================== */
+function renderAdminPanel(){
+  const app=document.getElementById('app');
+  const sec=S.adminSeccion||'negocios';
+  const negocios=S.adminNegocios||[];
+
+  // KPIs rápidos
+  const totalNegocios=negocios.length;
+  const activosHoy=negocios.filter(n=>n.estado==='activo').length;
+  const mrr=negocios.filter(n=>n.estado==='activo').reduce((s,n)=>s+(n.plan||PLAN_PRECIO),0);
+  const hoy=new Date().toISOString().slice(0,10);
+  const nuevosEstesMes=negocios.filter(n=>n.fechaCreacion&&n.fechaCreacion.slice(0,7)===hoy.slice(0,7)).length;
+
+  const adminSidebar=`
+  <div style="width:220px;background:#0d0f17;display:flex;flex-direction:column;height:100vh;position:fixed;top:0;left:0;z-index:100;border-right:1px solid #1e2235">
+    <div style="padding:18px 16px;border-bottom:1px solid #1e2235;display:flex;align-items:center;gap:10px">
+      <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">⚡</div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#fff;letter-spacing:-.3px">Cifra</div>
+        <div style="font-size:10px;color:#6366f1;font-weight:600;letter-spacing:.5px">ADMIN PANEL</div>
+      </div>
+    </div>
+    <nav style="flex:1;padding:12px 10px;overflow-y:auto">
+      ${[['negocios','🏢','Negocios'],['usuarios','👤','Usuarios'],['pagos','💳','Pagos'],['metricas','📊','Métricas'],['config','⚙️','Configuración']].map(([id,ic,lb])=>`
+      <div onclick="adminIr('${id}')" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;margin-bottom:2px;${sec===id?'background:rgba(99,102,241,.2);':''}transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background='${sec===id?'rgba(99,102,241,.2)':'transparent'}'">
+        <span style="font-size:15px">${ic}</span>
+        <span style="font-size:12.5px;font-weight:500;color:${sec===id?'#a5b4fc':'rgba(255,255,255,.55)'}">${lb}</span>
+        ${sec===id?'<div style="width:3px;height:16px;background:#6366f1;border-radius:2px;margin-left:auto"></div>':''}
+      </div>`).join('')}
+    </nav>
+    <div style="padding:14px 16px;border-top:1px solid #1e2235">
+      <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:4px;letter-spacing:.5px">MRR ACTUAL</div>
+      <div style="font-size:20px;font-weight:700;color:#34d399">S/ ${mrr.toLocaleString('es-PE')}</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:8px">${S.user?.email||''}</div>
+    </div>
+  </div>`;
+
+  // Topbar
+  const adminTop=`
+  <div style="background:#0d0f17;border-bottom:1px solid #1e2235;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50">
+    <div style="display:flex;align-items:center;gap:12px">
+      <h1 style="font-size:15px;font-weight:600;color:#fff">Panel de Administración</h1>
+      <span style="background:rgba(99,102,241,.2);color:#a5b4fc;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.5px">SOLO TÚ VES ESTO</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button onclick="doLogout()" style="display:flex;align-items:center;gap:6px;background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif" onmouseover="this.style.background='rgba(239,68,68,.2)'" onmouseout="this.style.background='rgba(239,68,68,.1)'">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Cerrar sesión
+      </button>
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff">
+        ${(S.user?.email||'A')[0].toUpperCase()}
+      </div>
+    </div>
+  </div>`;
+
+  // KPI cards
+  const kpiCards=`
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px">
+    ${[
+      {label:'Total negocios',val:totalNegocios,color:'#6366f1',icon:'🏢'},
+      {label:'Negocios activos',val:activosHoy,color:'#34d399',icon:'✅'},
+      {label:'MRR',val:'S/ '+mrr.toLocaleString('es-PE'),color:'#f59e0b',icon:'💰'},
+      {label:'Nuevos este mes',val:nuevosEstesMes,color:'#60a5fa',icon:'🆕'},
+    ].map(k=>`
+    <div style="background:#131620;border:1px solid #1e2235;border-radius:12px;padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:12px;color:rgba(255,255,255,.45)">${k.label}</div>
+        <span style="font-size:16px">${k.icon}</span>
+      </div>
+      <div style="font-size:22px;font-weight:700;color:${k.color}">${k.val}</div>
+    </div>`).join('')}
+  </div>`;
+
+  // Tabla negocios
+  const tablaNegocios=`
+  <div style="background:#131620;border:1px solid #1e2235;border-radius:12px;overflow:hidden">
+    <div style="padding:16px 20px;border-bottom:1px solid #1e2235;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:14px;font-weight:600;color:#fff">Negocios registrados</span>
+      <button onclick="adminAbrirCrear()" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer">+ Crear negocio</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="border-bottom:1px solid #1e2235">
+            ${['Negocio','Rubro','Admin','Plan','Estado','Creado','Acciones'].map(h=>`<th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:rgba(255,255,255,.35);letter-spacing:.5px">${h}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${negocios.length===0?`<tr><td colspan="7" style="padding:32px;text-align:center;color:rgba(255,255,255,.3);font-size:13px">Sin negocios registrados aún</td></tr>`:
+          negocios.map(n=>`
+          <tr style="border-bottom:1px solid #1e2235" onmouseover="this.style.background='rgba(255,255,255,.02)'" onmouseout="this.style.background='transparent'">
+            <td style="padding:12px 16px">
+              <div style="font-size:13px;font-weight:600;color:#fff">${n.nombre||'Sin nombre'}</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.35)">${n.id||''}</div>
+            </td>
+            <td style="padding:12px 16px;font-size:12px;color:rgba(255,255,255,.55)">${n.rubro||'—'}</td>
+            <td style="padding:12px 16px">
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="width:26px;height:26px;border-radius:50%;background:rgba(99,102,241,.3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#a5b4fc">${(n.adminEmail||'?')[0].toUpperCase()}</div>
+                <div>
+                  <div style="font-size:12px;color:rgba(255,255,255,.7)">${n.adminNombre||'—'}</div>
+                  <div style="font-size:11px;color:rgba(255,255,255,.35)">${n.adminEmail||'—'}</div>
+                </div>
+              </div>
+            </td>
+            <td style="padding:12px 16px;font-size:12px;color:#f59e0b;font-weight:600">S/ ${(n.plan||PLAN_PRECIO).toLocaleString('es-PE')}</td>
+            <td style="padding:12px 16px">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="background:${n.estado==='activo'?'rgba(52,211,153,.15)':'rgba(239,68,68,.15)'};color:${n.estado==='activo'?'#34d399':'#f87171'};font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;display:inline-block">${n.estado||'activo'}</span>
+                ${n.tipo==='prueba'?'<span style="background:rgba(251,191,36,.15);color:#fbbf24;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;display:inline-block;letter-spacing:.3px">PRUEBA</span>':''}
+              </div>
+            </td>
+            <td style="padding:12px 16px;font-size:12px;color:rgba(255,255,255,.35)">${n.fechaCreacion?n.fechaCreacion.slice(0,10):'—'}</td>
+            <td style="padding:12px 16px">
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button onclick="adminVerDetalle('${n.id}')" style="background:rgba(99,102,241,.15);color:#a5b4fc;border:none;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer">Ver detalle →</button>
+                ${n.tipo==='prueba'
+                  ?`<button onclick="adminActivarNegocio('${n.id}')" style="background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3);border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;font-weight:600">⚡ Activar</button>`
+                  :`<button onclick="adminDesactivarNegocio('${n.id}')" style="background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;font-weight:600">↩ Pasar a prueba</button>`
+                }
+              </div>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+
+  // Modal crear negocio
+  const formData=S.adminFormData||{};
+  const _acmInp='width:100%;background:#0d0f17;border:1px solid #1e2235;border-radius:8px;padding:9px 12px;font-size:13px;color:#e2e8f0;outline:none;font-family:Inter,sans-serif';
+  const _acmInpIn='width:100%;background:#131620;border:1px solid #1e2235;border-radius:8px;padding:9px 12px;font-size:13px;color:#e2e8f0;outline:none;font-family:Inter,sans-serif';
+  const _acmLbl='font-size:11px;font-weight:600;color:rgba(255,255,255,.4);display:block;margin-bottom:5px;letter-spacing:.4px';
+  const _acmSec='background:#0d0f17;border:1px solid #1e2235;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px';
+  const _acmSecHdr='font-size:11px;font-weight:700;color:#a5b4fc;margin-bottom:2px;letter-spacing:.6px';
+
+  // Módulos del rubro seleccionado
+  const _rubroMods=formData.rubro?(OB_PRESETS[formData.rubro]||OB_PRESETS.otro):{caja:true,inventario:true,agenda:true,comprobantes:true,entregas:true,ia:false};
+  const _modulos=formData.modulos||{..._rubroMods};
+  const _MODS=[['caja','💰','Caja & Ventas'],['inventario','📦','Inventario'],['agenda','📅','Clientes y agenda'],['comprobantes','🧾','Comprobantes'],['entregas','🚚','Entregas'],['ia','🤖','Análisis IA']];
+
+  // Categorías del rubro
+  const _rubroCats=(formData.rubro&&OB_CAT_PRESETS[formData.rubro])?OB_CAT_PRESETS[formData.rubro]:OB_CAT_PRESETS.otro;
+  const _cats=Array.isArray(formData.categorias)&&formData.categorias.length>0?formData.categorias:[..._rubroCats];
+
+  const todayStr=new Date().toISOString().slice(0,10);
+
+  const modalCrear=S.adminShowCrear?`
+  <div style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)adminCerrarCrear()">
+    <div id="acm_modal_body" style="background:#131620;border:1px solid #1e2235;border-radius:16px;width:100%;max-width:620px;max-height:92vh;overflow-y:auto;display:flex;flex-direction:column">
+      <div style="padding:18px 22px;border-bottom:1px solid #1e2235;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#131620;z-index:1">
+        <h3 style="font-size:15px;font-weight:600;color:#fff">✨ Crear nuevo negocio</h3>
+        <button onclick="adminCerrarCrear()" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:22px;cursor:pointer;line-height:1">×</button>
+      </div>
+      <div style="padding:18px 22px;display:flex;flex-direction:column;gap:16px;flex:1">
+
+        <!-- DATOS DEL NEGOCIO -->
+        <div style="${_acmSec}">
+          <div style="${_acmSecHdr}">🏢 DATOS DEL NEGOCIO</div>
+          <div>
+            <label style="${_acmLbl}">Nombre del negocio *</label>
+            <input id="acf_nombre" value="${formData.nombre||''}" placeholder="Ej: Salón María López" style="${_acmInp}">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label style="${_acmLbl}">Rubro</label>
+              <select id="acf_rubro" onchange="adminSetRubro(this.value)" style="${_acmInp};cursor:pointer">
+                <option value="">Selecciona rubro</option>
+                ${OB_RUBROS.map(r=>`<option value="${r.id}" ${formData.rubro===r.id?'selected':''}>${r.icon} ${r.label}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label style="${_acmLbl}">Distrito</label>
+              <input id="acf_distrito" value="${formData.distrito||''}" placeholder="Ej: Miraflores" style="${_acmInp}">
+            </div>
+          </div>
+          <div>
+            <label style="${_acmLbl}">Dirección completa</label>
+            <input id="acf_direccion" value="${formData.direccion||''}" placeholder="Ej: Av. Larco 345, Miraflores" style="${_acmInp}">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label style="${_acmLbl}">RUC (opcional)</label>
+              <input id="acf_ruc" value="${formData.ruc||''}" placeholder="20XXXXXXXXX" maxlength="11" style="${_acmInp}">
+            </div>
+            <div>
+              <label style="${_acmLbl}">Teléfono / WhatsApp</label>
+              <input id="acf_negTel" value="${formData.negTel||''}" placeholder="9XXXXXXXX" style="${_acmInp}">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label style="${_acmLbl}">Email del negocio (opcional)</label>
+              <input id="acf_negEmail" value="${formData.negEmail||''}" placeholder="negocio@email.com" style="${_acmInp}">
+            </div>
+            <div>
+              <label style="${_acmLbl}">Inicio del servicio</label>
+              <input id="acf_fechaInicio" type="date" value="${formData.fechaInicio||todayStr}" style="${_acmInp}">
+            </div>
+          </div>
+        </div>
+
+        <!-- USUARIO PRINCIPAL -->
+        <div style="${_acmSec}">
+          <div style="${_acmSecHdr}">👤 USUARIO PRINCIPAL (ADMIN)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label style="${_acmLbl}">Correo *</label>
+              <input id="acf_adminEmail" value="${formData.adminEmail||''}" placeholder="admin@negocio.com" style="${_acmInpIn}">
+            </div>
+            <div>
+              <label style="${_acmLbl}">Nombre completo *</label>
+              <input id="acf_adminNombre" value="${formData.adminNombre||''}" placeholder="María López" style="${_acmInpIn}">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label style="${_acmLbl}">DNI</label>
+              <input id="acf_adminDni" value="${formData.adminDni||''}" placeholder="12345678" maxlength="8" style="${_acmInpIn}">
+            </div>
+            <div>
+              <label style="${_acmLbl}">Teléfono personal</label>
+              <input id="acf_adminTelPersonal" value="${formData.adminTelPersonal||''}" placeholder="9XXXXXXXX" style="${_acmInpIn}">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label style="${_acmLbl}">WhatsApp</label>
+              <input id="acf_adminTel" value="${formData.adminTel||''}" placeholder="51987654321" style="${_acmInpIn}">
+            </div>
+            <div>
+              <label style="${_acmLbl}">Contraseña temporal *</label>
+              <input id="acf_adminPass" value="${formData.adminPass||''}" placeholder="Min. 6 caracteres" style="${_acmInpIn}">
+            </div>
+          </div>
+        </div>
+
+        <!-- SEGUNDO USUARIO -->
+        <div style="border:1px solid #1e2235;border-radius:10px;overflow:hidden">
+          <div onclick="adminToggleUser2()" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:#0d0f17">
+            <div style="width:18px;height:18px;border-radius:4px;background:${formData.showUser2?'#6366f1':'transparent'};border:1.5px solid ${formData.showUser2?'#6366f1':'#374151'};display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;flex-shrink:0">${formData.showUser2?'✓':''}</div>
+            <span style="font-size:12px;font-weight:600;color:rgba(255,255,255,.55);letter-spacing:.4px">👥 SEGUNDO USUARIO (OPCIONAL)</span>
+          </div>
+          ${formData.showUser2?`
+          <div style="padding:14px;display:flex;flex-direction:column;gap:10px;background:#0d0f17;border-top:1px solid #1e2235">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div>
+                <label style="${_acmLbl}">Correo</label>
+                <input id="acf_u2Email" value="${formData.user2Email||''}" placeholder="usuario2@negocio.com" style="${_acmInpIn}">
+              </div>
+              <div>
+                <label style="${_acmLbl}">Nombre completo</label>
+                <input id="acf_u2Nombre" value="${formData.user2Nombre||''}" placeholder="Nombre" style="${_acmInpIn}">
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div>
+                <label style="${_acmLbl}">DNI</label>
+                <input id="acf_u2Dni" value="${formData.user2Dni||''}" placeholder="12345678" maxlength="8" style="${_acmInpIn}">
+              </div>
+              <div>
+                <label style="${_acmLbl}">Teléfono</label>
+                <input id="acf_u2Tel" value="${formData.user2Tel||''}" placeholder="9XXXXXXXX" style="${_acmInpIn}">
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div>
+                <label style="${_acmLbl}">Rol</label>
+                <select id="acf_u2Rol" style="${_acmInpIn};cursor:pointer">
+                  ${['Vendedor','Técnico','Cajero','Almacenero'].map(r=>`<option value="${r.toLowerCase()}" ${(formData.user2Rol||'vendedor')===r.toLowerCase()?'selected':''}>${r}</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label style="${_acmLbl}">Contraseña temporal</label>
+                <input id="acf_u2Pass" value="${formData.user2Pass||''}" placeholder="Min. 6 caracteres" style="${_acmInpIn}">
+              </div>
+            </div>
+          </div>`:''}
+        </div>
+
+        <!-- MÓDULOS -->
+        <div style="${_acmSec}">
+          <div style="${_acmSecHdr}">⚙️ MÓDULOS ACTIVOS</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            ${_MODS.map(([id,ic,lb])=>{
+              const on=_modulos[id]!==false;
+              return `<div onclick="adminToggleMod('${id}')" style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;border:1px solid ${on?'rgba(99,102,241,.4)':'#1e2235'};background:${on?'rgba(99,102,241,.1)':'transparent'};cursor:pointer">
+                <span style="font-size:14px">${ic}</span>
+                <span style="font-size:12px;font-weight:500;color:${on?'#a5b4fc':'rgba(255,255,255,.35)'};flex:1">${lb}</span>
+                <div style="width:28px;height:16px;border-radius:8px;background:${on?'#6366f1':'#1e2235'};position:relative;flex-shrink:0;transition:background .2s">
+                  <div style="position:absolute;top:2px;${on?'right:2px':'left:2px'};width:12px;height:12px;border-radius:50%;background:#fff;transition:all .2s"></div>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- CATEGORÍAS -->
+        <div style="${_acmSec}">
+          <div style="${_acmSecHdr}">🏷️ CATEGORÍAS</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${_cats.map((c,i)=>`<div style="display:flex;align-items:center;gap:4px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:20px;padding:4px 10px">
+              <span style="font-size:12px;color:#a5b4fc">${c}</span>
+              <span onclick="adminRemoveCat(${i})" style="font-size:13px;color:rgba(255,255,255,.3);cursor:pointer;line-height:1">×</span>
+            </div>`).join('')}
+          </div>
+          <div style="display:flex;gap:8px">
+            <input id="acm_cat_inp" placeholder="Nueva categoría..." style="${_acmInp};flex:1" onkeydown="if(event.key==='Enter')adminAddCat()">
+            <button onclick="adminAddCat()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer">+</button>
+          </div>
+        </div>
+
+        ${S.adminCrearError?`<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 14px;color:#f87171;font-size:12px">${S.adminCrearError}</div>`:''}
+      </div>
+      <div style="padding:14px 22px;border-top:1px solid #1e2235;display:flex;gap:10px;justify-content:flex-end;position:sticky;bottom:0;background:#131620">
+        <button onclick="adminCerrarCrear()" style="background:#1e2235;color:rgba(255,255,255,.6);border:none;border-radius:8px;padding:9px 18px;font-size:13px;cursor:pointer">Cancelar</button>
+        <button onclick="adminCrearNegocio()" ${S.adminCreando?'disabled':''} style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;opacity:${S.adminCreando?'.6':'1'}">
+          ${S.adminCreando?'Creando...':'✨ Crear negocio'}
+        </button>
+      </div>
+    </div>
+  </div>`:'';
+
+
+  // Modal credenciales
+  const cred=S.adminNegocioCreado;
+  const modalCreds=cred?`
+  <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#131620;border:1px solid #1e2235;border-radius:16px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+      <div style="padding:20px 24px;border-bottom:1px solid #1e2235;display:flex;align-items:center;justify-content:space-between">
+        <h3 style="font-size:15px;font-weight:600;color:#fff">✅ Negocio creado exitosamente</h3>
+        <button onclick="adminCerrarCredenciales()" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:20px;cursor:pointer">×</button>
+      </div>
+      <div style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+        <div style="background:#0d0f17;border:1px solid #1e2235;border-radius:10px;padding:14px">
+          <div style="font-size:11px;font-weight:600;color:#34d399;margin-bottom:10px;letter-spacing:.5px">NEGOCIO</div>
+          <div style="font-size:14px;font-weight:700;color:#fff">${cred.nombre}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px">${cred.rubro||''} • ${cred.distrito||''}</div>
+        </div>
+        ${(cred.usuarios||[]).map(u=>`
+        <div style="background:#0d0f17;border:1px solid #1e2235;border-radius:10px;padding:14px">
+          <div style="font-size:11px;font-weight:600;color:#a5b4fc;margin-bottom:10px;letter-spacing:.5px">${u.rol==='admin'?'👤 ADMIN':'👥 COLABORADOR'}</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${[['Nombre',u.nombre],['Email',u.email],['Contraseña',u.pass],['WhatsApp',u.tel||'—']].map(([lb,vl])=>`
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:11px;color:rgba(255,255,255,.35)">${lb}</span>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:12px;color:#e2e8f0;font-family:monospace">${vl}</span>
+                ${vl&&vl!=='—'?`<button onclick="adminCopiar('${vl}')" style="background:#1e2235;border:none;border-radius:4px;padding:2px 6px;font-size:10px;color:rgba(255,255,255,.5);cursor:pointer">Copiar</button>`:''}
+              </div>
+            </div>`).join('')}
+          </div>
+          ${u.tel&&u.tel!=='—'?`<button onclick="adminWhatsApp('${u.tel}','${u.nombre}','${u.email}','${u.pass}','${u.rol}')" style="width:100%;margin-top:10px;background:rgba(37,211,102,.15);color:#25d366;border:1px solid rgba(37,211,102,.3);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer">📱 Enviar por WhatsApp</button>`:''}
+        </div>`).join('')}
+      </div>
+      <div style="padding:16px 24px;border-top:1px solid #1e2235">
+        <button onclick="adminCerrarCredenciales()" style="width:100%;background:#1e2235;color:rgba(255,255,255,.6);border:none;border-radius:8px;padding:10px;font-size:13px;cursor:pointer">Cerrar</button>
+      </div>
+    </div>
+  </div>`:'';
+
+  // Vista detalle negocio
+  if(S.adminNegocioDetalle){
+    const neg=S.adminNegocios.find(n=>n.id===S.adminNegocioDetalle)||{};
+    const dtab=S.adminDetalleTab||'info';
+    const _dLbl='font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px';
+    const _dVal='font-size:13px;color:#e2e8f0;font-weight:500';
+    const _dRow=(lb,vl,field)=>`<div style="background:#0d0f17;border:1px solid #1e2235;border-radius:8px;padding:12px">
+      <div style="${_dLbl}">${lb}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span id="dv_${field}" style="${_dVal}">${vl||'—'}</span>
+        <button onclick="adminDetalleEditar('${field}','${(vl||'').replace(/'/g,"\\'")}','${neg.id}')" style="background:none;border:none;color:#6366f1;font-size:11px;cursor:pointer;white-space:nowrap">Editar</button>
+      </div>
+    </div>`;
+
+    let dtContent='';
+    if(dtab==='info') dtContent=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${_dRow('Nombre',neg.nombre,'nombre')}
+        ${_dRow('Rubro',neg.rubro,'rubro')}
+        ${_dRow('RUC',neg.ruc,'ruc')}
+        ${_dRow('Distrito',neg.distrito,'distrito')}
+        ${_dRow('Dirección',neg.direccion,'direccion')}
+        ${_dRow('Teléfono',neg.telefono,'telefono')}
+        ${_dRow('Email',neg.adminEmail||neg.email,'email')}
+        ${_dRow('Fecha inicio',neg.fechaInicio,'fechaInicio')}
+        ${_dRow('Plan','S/ '+(neg.plan||PLAN_PRECIO),'plan')}
+        ${_dRow('Estado',neg.estado||'activo','estado')}
+      </div>`;
+    else if(dtab==='usuarios') dtContent=`
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${(neg.usuarios||[]).map((u,i)=>`
+        <div style="background:#0d0f17;border:1px solid #1e2235;border-radius:10px;padding:14px;display:flex;align-items:center;gap:12px">
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#a5b4fc;flex-shrink:0">${(u.nombre||'?')[0].toUpperCase()}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:#fff">${u.nombre||'—'}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4)">${u.email||'—'} · <span style="color:#a5b4fc">${u.rol||'—'}</span></div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button onclick="adminDetalleVerCreds(${i})" style="background:rgba(99,102,241,.15);color:#a5b4fc;border:none;border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer">🔑 Creds</button>
+            <button onclick="adminDetalleEliminarUser(${i},'${neg.id}')" style="background:rgba(239,68,68,.1);color:#f87171;border:none;border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer">🗑</button>
+          </div>
+        </div>`).join('')}
+        ${(neg.usuarios||[]).length===0?'<div style="text-align:center;color:rgba(255,255,255,.3);padding:32px">Sin usuarios registrados</div>':''}
+      </div>`;
+    else if(dtab==='credenciales') dtContent=`
+      <div style="display:flex;flex-direction:column;gap:12px">
+        ${(neg.usuarios||[]).map(u=>`
+        <div style="background:#0d0f17;border:1px solid #1e2235;border-radius:10px;padding:14px">
+          <div style="font-size:11px;font-weight:700;color:#a5b4fc;margin-bottom:10px;letter-spacing:.5px">${u.rol==='admin'?'👤 ADMIN':'👥 '+((u.rol||'colaborador').toUpperCase())}</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${[['Nombre',u.nombre||'—'],['Email',u.email],['Contraseña',u.pass||'(no guardada)'],['WhatsApp',u.tel||'—'],['DNI',u.dni||'—']].map(([lb,vl])=>`
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:11px;color:rgba(255,255,255,.35)">${lb}</span>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:12px;color:#e2e8f0;font-family:monospace">${vl}</span>
+                ${vl&&vl!=='—'&&vl!=='(no guardada)'?`<button onclick="adminCopiar('${vl.replace(/'/g,"\\'")}')" style="background:#1e2235;border:none;border-radius:4px;padding:2px 6px;font-size:10px;color:rgba(255,255,255,.5);cursor:pointer">Copiar</button>`:''}
+              </div>
+            </div>`).join('')}
+          </div>
+          ${u.tel&&u.tel!=='—'?`<button onclick="adminWhatsApp('${u.tel}','${(u.nombre||'').replace(/'/g,"\\'")}','${u.email}','${(u.pass||'').replace(/'/g,"\\'")}','${u.rol}')" style="width:100%;margin-top:10px;background:rgba(37,211,102,.15);color:#25d366;border:1px solid rgba(37,211,102,.3);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer">📱 Enviar por WhatsApp</button>`:''}
+        </div>`).join('')}
+      </div>`;
+    else if(dtab==='modulos') dtContent=`
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${[['caja','💰','Caja & Ventas','Control de ingresos y egresos'],['inventario','📦','Inventario','Stock y productos'],['agenda','📅','Clientes y agenda','Citas y clientes'],['comprobantes','🧾','Comprobantes','Boletas y facturas'],['entregas','🚚','Entregas','Control de pedidos'],['ia','🤖','Análisis IA','Insights automáticos']].map(([id,ic,lb,desc])=>{
+          const _negMods=neg.modulos||(neg.tipo==='prueba'?{caja:true,inventario:true,agenda:true,comprobantes:true,entregas:false,ia:false}:{});
+          const on=_negMods[id]!==false;
+          return `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;border:1px solid ${on?'rgba(34,197,94,.3)':'#1e2235'};background:${on?'rgba(34,197,94,.06)':'transparent'}">
+            <span style="font-size:18px;flex-shrink:0">${ic}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;color:${on?'#e2e8f0':'rgba(255,255,255,.35)'}">${lb}</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.3);margin-top:1px">${desc}</div>
+            </div>
+            <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;flex-shrink:0;${on?'background:rgba(34,197,94,.2);color:#22c55e':'background:#1e2235;color:rgba(255,255,255,.3)'}">${on?'Activo':'Inactivo'}</span>
+            <div onclick="adminToggleModulo('${neg.id}','${id}',${!on})" style="width:40px;height:22px;border-radius:11px;background:${on?'#22c55e':'#1e2235'};cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;border:1px solid ${on?'#16a34a':'#374151'}">
+              <div style="position:absolute;top:2px;${on?'right:2px':'left:2px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <p style="font-size:11px;color:rgba(255,255,255,.25);margin-top:14px">Los cambios se reflejan en tiempo real en la app del cliente.</p>`;
+    else dtContent=`<div style="text-align:center;color:rgba(255,255,255,.3);padding:48px">Sección en construcción</div>`;
+
+    const dtTabs=[['info','📋','Información'],['usuarios','👤','Usuarios'],['credenciales','🔑','Credenciales'],['modulos','⚙️','Módulos'],['pago','💳','Pago']];
+
+    app.innerHTML=`
+    <style>body{background:#0a0c12;margin:0}</style>
+    ${adminSidebar}
+    <div style="margin-left:220px;min-height:100vh;display:flex;flex-direction:column">
+      ${adminTop}
+      <div style="padding:24px;flex:1;display:flex;gap:20px;align-items:flex-start">
+        <!-- Sidebar detalle -->
+        <div style="width:200px;flex-shrink:0;background:#131620;border:1px solid #1e2235;border-radius:12px;overflow:hidden;position:sticky;top:80px">
+          <div style="padding:14px 16px;border-bottom:1px solid #1e2235">
+            <button onclick="adminCerrarDetalle()" style="display:flex;align-items:center;gap:6px;background:none;border:none;color:rgba(255,255,255,.4);font-size:12px;cursor:pointer;padding:0">← Volver</button>
+            <div style="font-size:13px;font-weight:600;color:#fff;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${neg.nombre||'Negocio'}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.35)">${neg.rubro||''}</div>
+          </div>
+          <div style="padding:8px">
+            ${dtTabs.map(([id,ic,lb])=>`
+            <div onclick="adminDetalleTab('${id}')" style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:7px;cursor:pointer;margin-bottom:2px;background:${dtab===id?'rgba(99,102,241,.2)':'transparent'};color:${dtab===id?'#a5b4fc':'rgba(255,255,255,.5)'}">
+              <span style="font-size:13px">${ic}</span>
+              <span style="font-size:12px;font-weight:${dtab===id?'600':'400'}">${lb}</span>
+            </div>`).join('')}
+          </div>
+          <div style="padding:10px;border-top:1px solid #1e2235;display:flex;flex-direction:column;gap:6px">
+            <button onclick="adminSincronizarNegocio('${neg.id}')" style="width:100%;background:rgba(99,102,241,.1);color:#a5b4fc;border:1px solid rgba(99,102,241,.2);border-radius:7px;padding:8px;font-size:11px;font-weight:600;cursor:pointer">🔄 Sincronizar datos</button>
+            <button onclick="adminSuspenderNegocio('${neg.id}')" style="width:100%;background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2);border-radius:7px;padding:8px;font-size:11px;font-weight:600;cursor:pointer">⛔ Suspender negocio</button>
+          </div>
+        </div>
+        <!-- Contenido detalle -->
+        <div style="flex:1;min-width:0">
+          <div style="background:#131620;border:1px solid #1e2235;border-radius:12px;padding:20px">
+            <h3 style="font-size:14px;font-weight:600;color:#fff;margin-bottom:16px">${dtTabs.find(t=>t[0]===dtab)?.[2]||''}</h3>
+            ${dtContent}
+          </div>
+        </div>
+      </div>
+    </div>`;
+    return;
+  }
+
+  // Contenido por sección
+  let secContent='';
+  if(sec==='negocios') secContent=kpiCards+tablaNegocios;
+  else secContent=`<div style="background:#131620;border:1px solid #1e2235;border-radius:12px;padding:48px;text-align:center;color:rgba(255,255,255,.3);font-size:14px">Sección en construcción</div>`;
+
+  app.innerHTML=`
+  <style>body{background:#0a0c12;margin:0}</style>
+  ${adminSidebar}
+  <div style="margin-left:220px;min-height:100vh;display:flex;flex-direction:column">
+    ${adminTop}
+    <div style="padding:24px;flex:1">${secContent}</div>
+  </div>
+  ${modalCrear}
+  ${modalCreds}`;
+}
+
+window.adminIr=function(sec){S.adminSeccion=sec;render();};
+window.adminAbrirCrear=function(){S.adminShowCrear=true;S.adminFormData={fechaInicio:new Date().toISOString().slice(0,10)};S.adminCrearError='';render();};
+window.adminCerrarCrear=function(){S.adminShowCrear=false;S.adminCrearError='';render();};
+window.adminSet=function(field,val){if(!S.adminFormData)S.adminFormData={};S.adminFormData[field]=val;};
+function _adminSaveDom(){
+  const g=id=>((document.getElementById(id)||{}).value||'');
+  if(!S.adminFormData)S.adminFormData={};
+  const fields=['nombre','distrito','direccion','ruc','negTel','negEmail','fechaInicio','adminEmail','adminNombre','adminDni','adminTelPersonal','adminTel','adminPass','u2Email','u2Nombre','u2Dni','u2Tel','u2Pass'];
+  fields.forEach(k=>{const v=g('acf_'+k);if(v)S.adminFormData[k]=v;});
+}
+function _renderKeepScroll(){
+  _adminSaveDom();
+  const el=document.getElementById('acm_modal_body');
+  const st=el?el.scrollTop:0;
+  render();
+  setTimeout(()=>{const m=document.getElementById('acm_modal_body');if(m)m.scrollTop=st;},0);
+}
+window.adminSetRubro=function(rubro){
+  if(!S.adminFormData)S.adminFormData={};
+  S.adminFormData.rubro=rubro;
+  S.adminFormData.modulos={...(OB_PRESETS[rubro]||OB_PRESETS.otro)};
+  S.adminFormData.categorias=[...(OB_CAT_PRESETS[rubro]||OB_CAT_PRESETS.otro)];
+  _renderKeepScroll();
+};
+window.adminToggleMod=function(id){
+  if(!S.adminFormData)S.adminFormData={};
+  if(!S.adminFormData.modulos){
+    const r=S.adminFormData.rubro||'otro';
+    S.adminFormData.modulos={...(OB_PRESETS[r]||OB_PRESETS.otro)};
+  }
+  S.adminFormData.modulos[id]=!S.adminFormData.modulos[id];
+  _renderKeepScroll();
+};
+window.adminAddCat=function(){
+  if(!S.adminFormData)S.adminFormData={};
+  const inp=document.getElementById('acm_cat_inp');
+  const val=(inp?.value||'').trim();
+  if(!val) return;
+  const r=S.adminFormData.rubro||'otro';
+  if(!Array.isArray(S.adminFormData.categorias)) S.adminFormData.categorias=[...(OB_CAT_PRESETS[r]||OB_CAT_PRESETS.otro)];
+  if(S.adminFormData.categorias.includes(val)){notif('Esa categoría ya existe');return;}
+  S.adminFormData.categorias.push(val);
+  const catVal=val;
+  _renderKeepScroll();
+  setTimeout(()=>{const el=document.getElementById('acm_cat_inp');if(el)el.value='';},0);
+};
+window.adminRemoveCat=function(i){
+  if(!S.adminFormData)S.adminFormData={};
+  const r=S.adminFormData.rubro||'otro';
+  if(!Array.isArray(S.adminFormData.categorias)) S.adminFormData.categorias=[...(OB_CAT_PRESETS[r]||OB_CAT_PRESETS.otro)];
+  S.adminFormData.categorias.splice(i,1);
+  _renderKeepScroll();
+};
+window.adminToggleUser2=function(){
+  if(!S.adminFormData)S.adminFormData={};
+  S.adminFormData.showUser2=!S.adminFormData.showUser2;
+  _renderKeepScroll();
+};
+window.adminCopiar=function(text){navigator.clipboard.writeText(text).then(()=>notif('Copiado al portapapeles')).catch(()=>notif('No se pudo copiar'));};
+window.adminCerrarCredenciales=function(){S.adminNegocioCreado=null;render();};
+window.adminVerCredenciales=function(negId){
+  const neg=S.adminNegocios.find(n=>n.id===negId);
+  if(!neg){notif('Negocio no encontrado');return;}
+  S.adminNegocioCreado={nombre:neg.nombre,rubro:neg.rubro,distrito:neg.distrito,usuarios:(neg.usuarios||[])};
+  render();
+};
+window.adminVerDetalle=function(negId){S.adminNegocioDetalle=negId;S.adminDetalleTab='info';render();};
+window.adminCerrarDetalle=function(){S.adminNegocioDetalle=null;render();};
+window.adminDetalleTab=function(tab){S.adminDetalleTab=tab;render();};
+window.adminDetalleVerCreds=function(i){S.adminDetalleTab='credenciales';render();};
+window.adminDetalleEditar=async function(field,valorActual,negId){
+  const nuevo=prompt('Editar '+field+':',valorActual);
+  if(nuevo===null)return;
+  try{
+    await update(ref(db,'admin/negocios/'+negId),{[field]:nuevo});
+    const neg=S.adminNegocios.find(n=>n.id===negId);
+    if(neg)neg[field]=nuevo;
+    notif('✅ Guardado');render();
+  }catch(e){notif('Error: '+e.message);}
+};
+window.adminDetalleEliminarUser=async function(i,negId){
+  if(!confirm('¿Eliminar este usuario de la lista?'))return;
+  try{
+    const neg=S.adminNegocios.find(n=>n.id===negId);
+    if(!neg)return;
+    const users=(neg.usuarios||[]).filter((_,idx)=>idx!==i);
+    await update(ref(db,'admin/negocios/'+negId),{usuarios:users});
+    neg.usuarios=users;
+    notif('Usuario eliminado');render();
+  }catch(e){notif('Error: '+e.message);}
+};
+window.adminActivarNegocio=async function(negId){
+  if(!confirm('¿Activar esta cuenta? Cambiará de prueba a pagado y eliminará todas las restricciones.'))return;
+  try{
+    await update(ref(db,'negocios/'+negId+'/config'),{tipo:'pagado'});
+    try{ await update(ref(db,'admin/negocios/'+negId),{tipo:'pagado'}); }catch(_){}
+    const neg=S.adminNegocios.find(n=>n.id===negId);
+    if(neg) neg.tipo='pagado';
+    notif('✅ Cuenta activada — el cliente ya no tiene restricciones');
+    render();
+  }catch(e){notif('Error: '+e.message);}
+};
+window.adminSincronizarNegocio=async function(negId){
+  try{
+    const [cfgSnap,profSnap,adminSnap]=await Promise.all([
+      get(ref(db,'negocios/'+negId+'/config')),
+      get(ref(db,'userProfiles/'+negId)),
+      get(ref(db,'admin/negocios/'+negId)),
+    ]);
+    const cfg=cfgSnap.exists()?cfgSnap.val():{};
+    const prof=profSnap.exists()?profSnap.val():{};
+    const adminData=adminSnap.exists()?adminSnap.val():{};
+    const nombreUsuario=prof.nombre||adminData.adminNombre||'';
+    const updates={
+      nombre:cfg.nombre||adminData.nombre||'(sin configurar)',
+      rubro:cfg.rubro||'',
+      ruc:cfg.ruc||'',
+      distrito:cfg.distrito||'',
+      direccion:cfg.direccion||'',
+      telefono:cfg.telefono||cfg.whatsapp||'',
+      tipo:cfg.tipo||adminData.tipo||'prueba',
+      adminNombre:nombreUsuario,
+      ...(cfg.fechaCreacion?{fechaInicio:cfg.fechaCreacion.slice(0,10)}:{}),
+    };
+    // Also update nombre in usuarios[0]
+    const usuarios=adminData.usuarios||[];
+    if(usuarios.length>0&&!usuarios[0].nombre&&nombreUsuario){
+      usuarios[0].nombre=nombreUsuario;
+      updates.usuarios=usuarios;
+    }
+    await update(ref(db,'admin/negocios/'+negId),updates);
+    const neg=S.adminNegocios.find(n=>n.id===negId);
+    if(neg) Object.assign(neg,updates);
+    notif('✅ Datos sincronizados correctamente');
+    render();
+  }catch(e){notif('Error al sincronizar: '+e.message);}
+};
+window.adminDesactivarNegocio=async function(negId){
+  if(!confirm('¿Pasar esta cuenta a modo prueba? Se activarán las restricciones de 25 movimientos.'))return;
+  try{
+    await update(ref(db,'negocios/'+negId+'/config'),{tipo:'prueba'});
+    try{ await update(ref(db,'admin/negocios/'+negId),{tipo:'prueba'}); }catch(_){}
+    const neg=S.adminNegocios.find(n=>n.id===negId);
+    if(neg) neg.tipo='prueba';
+    notif('↩ Cuenta pasada a modo prueba');
+    render();
+  }catch(e){notif('Error: '+e.message);}
+};
+window.adminToggleModulo=async function(negId,modulo,newVal){
+  // Update in admin/negocios cache
+  const neg=S.adminNegocios.find(n=>n.id===negId);
+  if(neg){
+    if(!neg.modulos) neg.modulos={};
+    neg.modulos[modulo]=newVal;
+  }
+  render();
+  try{
+    // Write directly to the client's negocio config so real-time listeners pick it up
+    await update(ref(db,'negocios/'+negId+'/config/modulos'),{[modulo]:newVal});
+    notif(newVal?'✅ Módulo activado':'Módulo desactivado');
+  }catch(e){
+    // Revert on error
+    if(neg&&neg.modulos) neg.modulos[modulo]=!newVal;
+    render();
+    notif('Error: '+e.message);
+  }
+};
+window.adminSuspenderNegocio=async function(negId){
+  if(!confirm('¿Suspender este negocio?'))return;
+  try{
+    await update(ref(db,'admin/negocios/'+negId),{estado:'suspendido'});
+    const neg=S.adminNegocios.find(n=>n.id===negId);
+    if(neg)neg.estado='suspendido';
+    notif('Negocio suspendido');render();
+  }catch(e){notif('Error: '+e.message);}
+};
+window.adminWhatsApp=function(tel,nombre,email,pass,rol){
+  const msg=encodeURIComponent(
+    '¡Hola '+nombre+'! 👋\n\n'+
+    'Te enviamos tus credenciales de acceso a *Sesk* (Sistema de Gestión):\n\n'+
+    '🔗 *Acceso:* https://sesk.app\n'+
+    '📧 *Email:* '+email+'\n'+
+    '🔑 *Contraseña:* '+pass+'\n'+
+    (rol==='admin'?'\n🏢 Tienes acceso como *Administrador* del negocio.\n':'\n👥 Tienes acceso como *Colaborador*.\n')+
+    '\n_Por seguridad, te recomendamos cambiar tu contraseña al ingresar._\n\n'+
+    '¿Tienes alguna duda? Estamos aquí para ayudarte. 💜'
+  );
+  const clean=tel.replace(/\D/g,'');
+  window.open('https://wa.me/'+clean+'?text='+msg,'_blank');
+};
+window.adminCrearNegocio=async function(){
+  // Leer valores directo del DOM para evitar pérdidas por re-renders
+  const g=id=>((document.getElementById(id)||{}).value||'').trim();
+  const f={
+    nombre:       g('acf_nombre'),
+    rubro:        g('acf_rubro')||S.adminFormData?.rubro||'otro',
+    distrito:     g('acf_distrito'),
+    direccion:    g('acf_direccion'),
+    ruc:          g('acf_ruc'),
+    negTel:       g('acf_negTel'),
+    negEmail:     g('acf_negEmail'),
+    fechaInicio:  g('acf_fechaInicio'),
+    adminEmail:   g('acf_adminEmail'),
+    adminNombre:  g('acf_adminNombre'),
+    adminDni:     g('acf_adminDni'),
+    adminTelPersonal: g('acf_adminTelPersonal'),
+    adminTel:     g('acf_adminTel'),
+    adminPass:    g('acf_adminPass'),
+    user2Email:   g('acf_u2Email'),
+    user2Nombre:  g('acf_u2Nombre'),
+    user2Dni:     g('acf_u2Dni'),
+    user2Tel:     g('acf_u2Tel'),
+    user2Rol:     g('acf_u2Rol')||'vendedor',
+    user2Pass:    g('acf_u2Pass'),
+    showUser2:    S.adminFormData?.showUser2||false,
+    modulos:      S.adminFormData?.modulos||null,
+    categorias:   S.adminFormData?.categorias||null,
+  };
+  // Guardar en S.adminFormData para que el re-render no pierda los valores
+  S.adminFormData={...S.adminFormData,...f};
+  if(!f.nombre||!f.adminEmail||!f.adminPass||!f.adminNombre){
+    S.adminCrearError='Completa: nombre del negocio, correo, nombre y contraseña del admin.';
+    _renderKeepScroll();return;
+  }
+  S.adminCreando=true;S.adminCrearError='';
+  // Mostrar spinner sin perder scroll
+  const btnEl=document.querySelector('#acm_modal_body button[onclick="adminCrearNegocio()"]');
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='Creando...';}
+
+  try{
+    const ts=new Date().toISOString();
+    const r=f.rubro||'otro';
+    const finalMods=f.modulos||{...(OB_PRESETS[r]||OB_PRESETS.otro)};
+    const finalCats=Array.isArray(f.categorias)&&f.categorias.length>0?f.categorias:[...(OB_CAT_PRESETS[r]||OB_CAT_PRESETS.otro)];
+    const usuarios=[];
+
+    // 1. Crear admin (o recuperar si ya existe) → authSec autenticado como admUid
+    let admCred;
+    try{ admCred=await createUserWithEmailAndPassword(authSec,f.adminEmail,f.adminPass); }
+    catch(e){ if(e.code==='auth/email-already-in-use'){ admCred=await signInWithEmailAndPassword(authSec,f.adminEmail,f.adminPass); } else throw e; }
+    const admUid=admCred.user.uid;
+    usuarios.push({uid:admUid,nombre:f.adminNombre,email:f.adminEmail,pass:f.adminPass,tel:f.adminTel||'',dni:f.adminDni||'',telPersonal:f.adminTelPersonal||'',rol:'admin'});
+
+    // 2. Escribir datos del admin con dbSec (auth = admUid)
+    await set(ref(dbSec,'userProfiles/'+admUid),{role:'admin',ownerUid:admUid,email:f.adminEmail,nombre:f.adminNombre,dni:f.adminDni||'',telefono:f.adminTelPersonal||'',whatsapp:f.adminTel||'',createdAt:ts,creadoPorAdmin:true,primeraVez:true});
+    await set(ref(dbSec,'negocios/'+admUid+'/config'),{
+      nombre:f.nombre,rubro:r,distrito:f.distrito||'',direccion:f.direccion||'',
+      ruc:f.ruc||'',telefono:f.negTel||'',email:f.negEmail||'',
+      fechaInicio:f.fechaInicio||ts.slice(0,10),
+      modulos:finalMods,categorias:finalCats,
+      plan:PLAN_PRECIO,estado:'activo',
+      onboardingCompleto:true,creadoPorAdmin:true,primeraVez:true,fechaCreacion:ts
+    });
+
+    // 3. Crear segundo usuario si aplica
+    let user2Uid=null;
+    if(f.showUser2&&f.user2Email&&f.user2Pass){
+      let u2Cred;
+      try{ u2Cred=await createUserWithEmailAndPassword(authSec,f.user2Email,f.user2Pass); }
+      catch(e){ if(e.code==='auth/email-already-in-use'){ u2Cred=await signInWithEmailAndPassword(authSec,f.user2Email,f.user2Pass); } else throw e; }
+      user2Uid=u2Cred.user.uid;
+      usuarios.push({uid:user2Uid,nombre:f.user2Nombre||'',email:f.user2Email,pass:f.user2Pass,tel:f.user2Tel||'',dni:f.user2Dni||'',rol:f.user2Rol||'vendedor'});
+      await set(ref(dbSec,'userProfiles/'+user2Uid),{role:f.user2Rol||'vendedor',ownerUid:admUid,email:f.user2Email,nombre:f.user2Nombre||'',dni:f.user2Dni||'',telefono:f.user2Tel||'',createdAt:ts,creadoPorAdmin:true,primeraVez:true});
+    }
+
+    // 4. Registrar en admin/negocios — intento silencioso, no bloquea si falla por reglas
+    try{
+      await set(ref(dbSec,'admin/negocios/'+admUid),{
+        nombre:f.nombre,rubro:r,distrito:f.distrito||'',direccion:f.direccion||'',
+        ruc:f.ruc||'',telefono:f.negTel||'',email:f.negEmail||'',fechaInicio:f.fechaInicio||ts.slice(0,10),
+        adminEmail:f.adminEmail,adminNombre:f.adminNombre,
+        plan:PLAN_PRECIO,estado:'activo',fechaCreacion:ts,
+        usuarios:usuarios.map(u=>({uid:u.uid,nombre:u.nombre,email:u.email,rol:u.rol,pass:u.pass||'',tel:u.tel||'',dni:u.dni||''}))
+      });
+    }catch(_){
+      // Si las reglas bloquean admin/negocios, guardamos solo en el config del negocio
+      // El panel admin lo puede leer desde negocios/{uid}/config con creadoPorAdmin:true
+    }
+
+    S.adminNegocioCreado={nombre:f.nombre,rubro:r,distrito:f.distrito||'',usuarios};
+    S.adminShowCrear=false;S.adminFormData={};S.adminCreando=false;
+    render();
+  }catch(e){
+    S.adminCrearError='Error: '+(e.message||e.code||'Permiso denegado — revisa las reglas de Firebase');
+    S.adminCreando=false;
+    _renderKeepScroll();
+  }
+};
+
+function renderOnboarding(){
+  const app=document.getElementById('app');
+  const d=S.onboardingData;
+  const step=S.onboardingStep;
+  const progPct=Math.round((step/7)*100);
+  const inp='width:100%;background:#0d0f17;border:1px solid #1e2235;border-radius:9px;padding:10px 12px;font-size:13.5px;color:#e2e8f0;font-family:\'Inter\',sans-serif;outline:none';
+  const sel=inp+';cursor:pointer';
+
+  let content='';
+  if(step===1){
+    content=`<h2 style="font-size:22px;font-weight:700;color:#e2e8f0;margin-bottom:8px">¿Cuál es tu rubro?</h2>
+    <p style="font-size:13.5px;color:#64748b;margin-bottom:24px">Esto nos ayuda a configurar Sesko para ti</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      ${OB_RUBROS.map(r=>`<div onclick="obSelectRubro('${r.id}')" style="padding:18px 10px;border-radius:12px;border:2px solid ${d.rubro===r.id?'#3d6bff':'#1e2235'};background:${d.rubro===r.id?'rgba(61,107,255,.12)':'#0d0f17'};cursor:pointer;text-align:center;transition:all .15s">
+        <div style="font-size:28px;margin-bottom:8px">${r.icon}</div>
+        <div style="font-size:13px;font-weight:500;color:${d.rubro===r.id?'#93c5fd':'#94a3b8'}">${r.label}</div>
+      </div>`).join('')}
+    </div>`;
+  } else if(step===2){
+    content=`<h2 style="font-size:22px;font-weight:700;color:#e2e8f0;margin-bottom:8px">Datos de tu negocio</h2>
+    <p style="font-size:13.5px;color:#64748b;margin-bottom:20px">Podés editarlos más adelante en Configuración</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:11.5px;font-weight:500;color:#64748b;display:block;margin-bottom:5px">Nombre del negocio <span style="color:#ef4444">*</span></label>
+        <input id="ob_nombre" type="text" placeholder="Ej: Cortinas Lima SAC" value="${d.nombre||''}" oninput="obSet('nombre',this.value)" style="${inp}" onfocus="this.style.borderColor='#3d6bff'" onblur="this.style.borderColor='#1e2235'">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:11.5px;font-weight:500;color:#64748b;display:block;margin-bottom:5px">RUC (opcional)</label>
+          <input id="ob_ruc" type="text" placeholder="20XXXXXXXXX" maxlength="11" value="${d.ruc||''}" oninput="obSet('ruc',this.value)" style="${inp}" onfocus="this.style.borderColor='#3d6bff'" onblur="this.style.borderColor='#1e2235'">
+        </div>
+        <div>
+          <label style="font-size:11.5px;font-weight:500;color:#64748b;display:block;margin-bottom:5px">WhatsApp</label>
+          <input id="ob_wa" type="tel" placeholder="9XXXXXXXX" value="${d.whatsapp||''}" oninput="obSet('whatsapp',this.value)" style="${inp}" onfocus="this.style.borderColor='#3d6bff'" onblur="this.style.borderColor='#1e2235'">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:11.5px;font-weight:500;color:#64748b;display:block;margin-bottom:5px">Teléfono del negocio</label>
+          <input id="ob_tel" type="tel" placeholder="Ej: 01-234-5678" value="${d.telefono||''}" oninput="obSet('telefono',this.value)" style="${inp}" onfocus="this.style.borderColor='#3d6bff'" onblur="this.style.borderColor='#1e2235'">
+        </div>
+        <div>
+          <label style="font-size:11.5px;font-weight:500;color:#64748b;display:block;margin-bottom:5px">Dirección del negocio</label>
+          <input id="ob_dir" type="text" placeholder="Ej: Av. Principal 123, Lima" value="${d.direccion||''}" oninput="obSet('direccion',this.value)" style="${inp}" onfocus="this.style.borderColor='#3d6bff'" onblur="this.style.borderColor='#1e2235'">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11.5px;font-weight:500;color:#64748b;display:block;margin-bottom:5px">País</label>
+        <select onchange="obSet('pais',this.value);obSet('departamento','');obSet('provincia','');obSet('distrito','');render()" style="${sel};color:#e2e8f0">
+          ${OB_PAISES.map(p2=>`<option value="${p2}" ${d.pais===p2?'selected':''}>${p2}</option>`).join('')}
+        </select>
+      </div>
+      ${d.pais==='Perú'?`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:11.5px;font-weight:500;color:#64748b;display:block;margin-bottom:5px">Departamento</label>
+          <select onchange="obSet('departamento',this.value);obSet('provincia','');obSet('distrito','');render()" style="${sel};color:${d.departamento?'#e2e8f0':'#64748b'}">
+            <option value="">Seleccionar</option>
+            ${PERU_DEPTS.map(dep=>`<option value="${dep}" ${d.departamento===dep?'selected':''}>${dep}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11.5px;font-weight:500;color:#64748b;display:block;margin-bottom:5px">Provincia</label>
+          <select onchange="obSet('provincia',this.value);obSet('distrito','');render()" style="${sel};color:${d.provincia?'#e2e8f0':'#64748b'}" ${!d.departamento?'disabled':''}>
+            <option value="">Seleccionar</option>
+            ${(PERU_PROVS[d.departamento]||[]).map(pv=>`<option value="${pv}" ${d.provincia===pv?'selected':''}>${pv}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11.5px;font-weight:500;color:#64748b;display:block;margin-bottom:5px">Distrito</label>
+        ${(d.departamento==='Lima'&&d.provincia==='Lima')?`
+        <select onchange="obSet('distrito',this.value)" style="${sel};color:${d.distrito?'#e2e8f0':'#64748b'}">
+          <option value="">Seleccionar distrito</option>
+          ${LIMA_DISTRITOS.map(dt=>`<option value="${dt}" ${d.distrito===dt?'selected':''}>${dt}</option>`).join('')}
+        </select>`:`
+        <input type="text" placeholder="Ingresa tu distrito" value="${d.distrito||''}" oninput="obSet('distrito',this.value)" style="${inp}" onfocus="this.style.borderColor='#3d6bff'" onblur="this.style.borderColor='#1e2235'" ${!d.provincia?'disabled':''}>
+        `}
+      </div>`:`
+      <div>
+        <label style="font-size:11.5px;font-weight:500;color:#64748b;display:block;margin-bottom:5px">Ciudad / Distrito</label>
+        <input type="text" placeholder="Ej: Santiago, Bogotá..." value="${d.distrito||''}" oninput="obSet('distrito',this.value)" style="${inp}" onfocus="this.style.borderColor='#3d6bff'" onblur="this.style.borderColor='#1e2235'">
+      </div>`}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:11.5px;font-weight:500;color:#64748b;display:block;margin-bottom:5px">Años en el mercado</label>
+          <select onchange="obSet('añosEnMercado',this.value)" style="${sel};color:${d.añosEnMercado?'#e2e8f0':'#64748b'}">
+            <option value="">Seleccionar</option>
+            ${['Menos de 1 año','1-2 años','3-5 años','6-10 años','Más de 10 años'].map(o=>`<option value="${o}" ${d.añosEnMercado===o?'selected':''}>${o}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>`;
+  } else if(step===3){
+    content=`<h2 style="font-size:22px;font-weight:700;color:#e2e8f0;margin-bottom:8px">Tu equipo</h2>
+    <p style="font-size:13.5px;color:#64748b;margin-bottom:20px">¿Cuántas personas trabajan en tu negocio?</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px">
+      ${[['1','Solo yo'],['2-3','2 a 3 personas'],['4-8','4 a 8 personas'],['9+','9 o más']].map(([v,l])=>`
+        <div onclick="obSetEquipoCantidad('${v}')" style="padding:14px;border-radius:12px;border:2px solid ${d.equipo.cantidad===v?'#3d6bff':'#1e2235'};background:${d.equipo.cantidad===v?'rgba(61,107,255,.12)':'#0d0f17'};cursor:pointer;text-align:center;transition:all .15s">
+          <div style="font-size:17px;font-weight:700;color:${d.equipo.cantidad===v?'#93c5fd':'#e2e8f0'};margin-bottom:3px">${v}</div>
+          <div style="font-size:12px;color:#64748b">${l}</div>
+        </div>`).join('')}
+    </div>
+    <p style="font-size:13px;font-weight:500;color:#94a3b8;margin-bottom:12px">Roles en tu negocio (selección múltiple)</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      ${OB_ROLES.map(r=>{const s=d.equipo.roles.includes(r);return`<div onclick="obToggleRol('${r}')" style="padding:7px 14px;border-radius:20px;border:1.5px solid ${s?'#3d6bff':'#1e2235'};background:${s?'rgba(61,107,255,.15)':'#0d0f17'};cursor:pointer;font-size:13px;font-weight:500;color:${s?'#93c5fd':'#64748b'};transition:all .15s">${r}</div>`;}).join('')}
+    </div>`;
+  } else if(step===4){
+    content=`<h2 style="font-size:22px;font-weight:700;color:#e2e8f0;margin-bottom:8px">¿Cuáles son tus objetivos?</h2>
+    <p style="font-size:13.5px;color:#64748b;margin-bottom:20px">Elige hasta 3 objetivos principales</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${OB_OBJETIVOS.map(o=>{const s=d.objetivos.includes(o.id);return`<div onclick="obToggleObjetivo('${o.id}')" style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:12px;border:2px solid ${s?'#3d6bff':'#1e2235'};background:${s?'rgba(61,107,255,.12)':'#0d0f17'};cursor:pointer;transition:all .15s">
+        <span style="font-size:22px">${o.icon}</span>
+        <span style="font-size:14px;font-weight:500;color:${s?'#93c5fd':'#94a3b8'};flex:1">${o.label}</span>
+        <div style="width:20px;height:20px;border-radius:50%;${s?'background:#3d6bff;display:flex;align-items:center;justify-content:center':'border:2px solid #1e2235'}">${s?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+      </div>`;}).join('')}
+    </div>
+    ${d.objetivos.length>=3?'<p style="font-size:12px;color:#f59e0b;margin-top:10px;text-align:center">Máximo 3 objetivos</p>':''}`;
+  } else if(step===5){
+    const cats=d.categorias.length>0?d.categorias:(OB_CAT_PRESETS[d.rubro]||OB_CAT_PRESETS.otro);
+    content=`<h2 style="font-size:22px;font-weight:700;color:#e2e8f0;margin-bottom:8px">Tus categorías</h2>
+    <p style="font-size:13.5px;color:#64748b;margin-bottom:20px">Preseleccionadas para tu rubro. Quitá las que no uses y agregá las tuyas.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">
+      ${cats.map((c,i)=>`<div style="display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:20px;background:rgba(61,107,255,.15);border:1.5px solid #3d6bff;font-size:13px;font-weight:500;color:#eceef8">
+        <span>${c}</span>
+        <span onclick="obRemoveCategoria(${i})" style="cursor:pointer;font-size:16px;line-height:1;color:#64748b;margin-left:2px;transition:color .15s" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#64748b'">×</span>
+      </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px">
+      <input id="ob_cat_input" type="text" placeholder="Agregar categoría..." maxlength="40" style="flex:1;background:#0d0f17;border:1px solid #1e2235;border-radius:9px;padding:10px 12px;font-size:13.5px;color:#e2e8f0;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='#3d6bff'" onblur="this.style.borderColor='#1e2235'" onkeydown="if(event.key==='Enter'){event.preventDefault();obAddCategoria();}">
+      <button onclick="obAddCategoria()" style="padding:10px 18px;border-radius:9px;border:none;background:#3d6bff;color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">+</button>
+    </div>
+    ${cats.length===0?'<p style="font-size:12px;color:#f59e0b;margin-top:10px">Agrega al menos una categoría</p>':''}`;
+  } else if(step===6){
+    content=`<h2 style="font-size:22px;font-weight:700;color:#e2e8f0;margin-bottom:8px">Módulos activos</h2>
+    <p style="font-size:13.5px;color:#64748b;margin-bottom:20px">Preconfigurados para tu rubro. Podés cambiarlos después.</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${OB_MODULOS.map(m=>{const on=d.modulos[m.id];return`<div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:12px;background:#0d0f17;border:1px solid #1e2235">
+        <span style="font-size:20px">${m.icon}</span>
+        <div style="flex:1">
+          <div style="font-size:13.5px;font-weight:600;color:#e2e8f0">${m.label}</div>
+          <div style="font-size:12px;color:#64748b;margin-top:2px">${m.desc}</div>
+        </div>
+        <div onclick="obToggleModulo('${m.id}')" style="width:44px;height:24px;border-radius:12px;background:${on?'#3d6bff':'#2a2d3a'};cursor:pointer;position:relative;transition:background .2s;flex-shrink:0">
+          <div style="position:absolute;top:3px;${on?'right:3px':'left:3px'};width:18px;height:18px;border-radius:50%;background:#fff;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>
+        </div>
+      </div>`;}).join('')}
+    </div>`;
+  } else if(step===7){
+    const rObj=OB_RUBROS.find(r=>r.id===d.rubro)||{icon:'🏪',label:'No especificado'};
+    const activos=OB_MODULOS.filter(m=>d.modulos[m.id]);
+    const msgs=d.objetivos.map(oid=>OB_MSGS[oid]).filter(Boolean);
+    const cats7=d.categorias.length>0?d.categorias:(OB_CAT_PRESETS[d.rubro]||OB_CAT_PRESETS.otro);
+    content=`<h2 style="font-size:22px;font-weight:700;color:#e2e8f0;margin-bottom:6px">¡Todo listo${d.nombre?', '+d.nombre.split(' ')[0]:''}! 🎉</h2>
+    <p style="font-size:13.5px;color:#64748b;margin-bottom:20px">Así quedó tu configuración inicial</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="background:#0d0f17;border:1px solid #1e2235;border-radius:12px;padding:14px 16px">
+        <div style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Negocio</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:24px">${rObj.icon}</span>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:#e2e8f0">${d.nombre||'Sin nombre'}</div>
+            <div style="font-size:12px;color:#64748b">${rObj.label}${d.pais&&d.pais!=='Perú'?' · '+d.pais:d.departamento?' · '+d.departamento+(d.provincia?', '+d.provincia:'')+(d.distrito?', '+d.distrito:''):''}</div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#0d0f17;border:1px solid #1e2235;border-radius:12px;padding:14px 16px">
+        <div style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Categorías</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${cats7.map(c=>`<span style="padding:5px 10px;border-radius:20px;background:rgba(61,107,255,.15);border:1px solid rgba(61,107,255,.3);font-size:12px;color:#93c5fd">${c}</span>`).join('')}
+        </div>
+      </div>
+      <div style="background:#0d0f17;border:1px solid #1e2235;border-radius:12px;padding:14px 16px">
+        <div style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Módulos activados</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${activos.map(m=>`<span style="padding:5px 10px;border-radius:20px;background:rgba(61,107,255,.15);border:1px solid rgba(61,107,255,.3);font-size:12px;color:#93c5fd">${m.icon} ${m.label}</span>`).join('')}
+        </div>
+      </div>
+      ${msgs.length?`<div style="background:rgba(61,107,255,.08);border:1px solid rgba(61,107,255,.2);border-radius:12px;padding:14px 16px">
+        <div style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Con Sesko podrás</div>
+        ${msgs.map(m=>`<div style="display:flex;gap:8px;margin-bottom:7px"><span style="color:#3d6bff;font-size:14px;flex-shrink:0;margin-top:1px">✓</span><span style="font-size:13px;color:#94a3b8;line-height:1.4">${m}</span></div>`).join('')}
+      </div>`:''}
+    </div>`;
+  }
+
+  app.innerHTML=`
+  <div style="min-height:100vh;background:#0b0d13;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px">
+    <div style="width:100%;max-width:480px">
+      <div style="text-align:center;margin-bottom:28px">
+        <div style="width:46px;height:46px;border-radius:12px;background:#3d6bff;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div style="font-size:18px;font-weight:700;color:#e2e8f0;letter-spacing:-.3px">Sesko</div>
+      </div>
+      <div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11.5px;color:#64748b">Paso ${step} de 7</span>
+        <span style="font-size:11.5px;color:#64748b">${progPct}%</span>
+      </div>
+      <div style="height:4px;background:#1e2235;border-radius:99px;margin-bottom:28px;overflow:hidden">
+        <div style="height:100%;width:${progPct}%;background:#3d6bff;border-radius:99px;transition:width .4s ease"></div>
+      </div>
+      <div style="background:#0d0f17;border:1px solid #1e2235;border-radius:16px;padding:28px 24px">
+        ${content}
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px;${step===1?'justify-content:flex-end':'justify-content:space-between'}">
+        ${step>1?`<button onclick="obPrev()" style="padding:11px 22px;border-radius:10px;border:1px solid #1e2235;background:transparent;color:#94a3b8;font-size:14px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:background .15s" onmouseover="this.style.background='#0d0f17'" onmouseout="this.style.background='transparent'">← Atrás</button>`:''}
+        <button onclick="${step===7?'finalizarOnboarding()':'obNext()'}" style="padding:11px 28px;border-radius:10px;border:none;background:#3d6bff;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:background .15s" onmouseover="this.style.background='#2d5bef'" onmouseout="this.style.background='#3d6bff'">
+          ${step===7?'🚀 Empezar a usar Sesko':'Continuar →'}
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+window.obSet=function(field,val){S.onboardingData[field]=val;};
+window.obSetEquipoCantidad=function(v){S.onboardingData.equipo.cantidad=v;render();};
+window.obSelectRubro=function(id){S.onboardingData.rubro=id;applyRubroPreset(id);render();};
+window.obToggleRol=function(rol){const r=S.onboardingData.equipo.roles;const i=r.indexOf(rol);if(i>=0)r.splice(i,1);else r.push(rol);render();};
+window.obToggleObjetivo=function(id){const o=S.onboardingData.objetivos;const i=o.indexOf(id);if(i>=0)o.splice(i,1);else if(o.length<3)o.push(id);else{notif('Máximo 3 objetivos');return;}render();};
+window.obToggleModulo=function(id){S.onboardingData.modulos[id]=!S.onboardingData.modulos[id];render();};
+window.obRemoveCategoria=function(i){
+  const d=S.onboardingData;
+  if(d.categorias.length===0) d.categorias=[...(OB_CAT_PRESETS[d.rubro]||OB_CAT_PRESETS.otro)];
+  d.categorias.splice(i,1);render();
+};
+window.obAddCategoria=function(){
+  const d=S.onboardingData;
+  const inp=document.getElementById('ob_cat_input');
+  const val=(inp?.value||'').trim();
+  if(!val){notif('Escribe el nombre de la categoría');return;}
+  if(d.categorias.length===0) d.categorias=[...(OB_CAT_PRESETS[d.rubro]||OB_CAT_PRESETS.otro)];
+  if(d.categorias.includes(val)){notif('Esa categoría ya existe');return;}
+  d.categorias.push(val);render();
+  setTimeout(()=>{const el=document.getElementById('ob_cat_input');if(el)el.value='';},10);
+};
+window.obNext=function(){
+  const d=S.onboardingData;
+  if(S.onboardingStep===1&&!d.rubro){notif('Selecciona tu rubro para continuar');return;}
+  if(S.onboardingStep===2&&!d.nombre.trim()){notif('Ingresa el nombre de tu negocio');return;}
+  S.onboardingStep++;
+  if(S.onboardingStep===6&&(S.esPrueba||S.negocioTipo==='prueba')) S.onboardingStep++;
+  render();
+};
+window.obPrev=function(){
+  if(S.onboardingStep>1){
+    S.onboardingStep--;
+    if(S.onboardingStep===6&&(S.esPrueba||S.negocioTipo==='prueba')) S.onboardingStep--;
+    render();
+  }
+};
+window.finalizarOnboarding=async function(){
+  const d=S.onboardingData;
+  if(!d.nombre.trim()){S.onboardingStep=2;render();notif('Falta el nombre del negocio');return;}
+  const uid=S.ownerUid||S.user?.uid;
+  const finalCats=d.categorias.length>0?d.categorias:[...(OB_CAT_PRESETS[d.rubro]||OB_CAT_PRESETS.otro)];
+  const _obTipo=(S.esPrueba||S.negocioTipo==='prueba')?'prueba':'pagado';
+  const cfg={rubro:d.rubro,nombre:d.nombre.trim(),ruc:d.ruc||'',pais:d.pais||'Perú',departamento:d.departamento||'',provincia:d.provincia||'',distrito:d.distrito||'',whatsapp:d.whatsapp||'',telefono:d.telefono||'',direccion:d.direccion||'',añosEnMercado:d.añosEnMercado||'',ventasMensuales:d.ventasMensuales||'',equipo:{cantidad:d.equipo.cantidad||'1',roles:d.equipo.roles},objetivos:d.objetivos,modulos:d.modulos,categorias:finalCats,fechaCreacion:new Date().toISOString(),onboardingCompleto:true,tipo:_obTipo,movimientosUsados:0};
+  try{
+    await set(ref(db,'negocios/'+uid+'/config'),cfg);
+    // Sync business data to admin panel record
+    try{
+      const _adminSnap=await get(ref(db,'admin/negocios/'+uid));
+      const _adminData=_adminSnap.exists()?_adminSnap.val():{};
+      const _usuarios=_adminData.usuarios||[];
+      if(_usuarios.length>0&&!_usuarios[0].nombre&&S.nombre){
+        _usuarios[0].nombre=S.nombre;
+      }
+      await update(ref(db,'admin/negocios/'+uid),{
+        nombre:d.nombre.trim()||'(sin configurar)',
+        rubro:d.rubro||'',
+        ruc:d.ruc||'',
+        distrito:d.distrito||'',
+        direccion:d.direccion||'',
+        telefono:d.telefono||d.whatsapp||'',
+        tipo:_obTipo,
+        fechaInicio:new Date().toISOString().slice(0,10),
+        ...(_usuarios.length>0?{usuarios:_usuarios}:{}),
+      });
+    }catch(_){}
+    S.negocioConfig=cfg;
+    S.negocioTipo=cfg.tipo||'pagado';
+    S.movimientosUsados=0;
+    if(d.nombre) S.config.nombre=d.nombre.trim();
+    if(d.ruc) S.config.ruc=d.ruc;
+    if(d.telefono) S.config.telefono=d.telefono;
+    if(d.direccion) S.config.direccion=d.direccion;
+    if(d.whatsapp&&!d.telefono) S.config.telefono=d.whatsapp;
+    S.onboarding=false;
+    render();
+    setTimeout(()=>notif(S.esPrueba?'¡Bienvenido! Tienes 25 movimientos de prueba gratis 🎉':'¡Bienvenido a Sesko! 🎉'),400);
+  }catch(e){notif('Error al guardar: '+e.message);}
+};
 
 function renderApp(){
   const{ing,eg,neto,total,ticket}=calcKPIs();
@@ -2425,7 +4031,7 @@ function renderApp(){
   const _svgCfg='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>';
   const nav=[
     {id:'dashboard',icon:_svgDash,label:'Dashboard',single:true,group:'Operaciones'},
-    {id:'caja',icon:_svgCaja,label:'Caja & Ventas',subs:[{id:'historial',label:'Historial'},{id:'comprobantes',label:'Comprobantes'}],group:'Operaciones'},
+    {id:'caja',icon:_svgCaja,label:'Caja & Ventas',subs:[{id:'historial',label:'Historial'},...(moduloActivo('comprobantes')?[{id:'comprobantes',label:'Comprobantes'}]:[])],group:'Operaciones'},
     {id:'inventario',icon:_svgInv,label:'Inventario',subs:[{id:'productos',label:'Productos'},{id:'salidas',label:'Registrar salida'}],group:'Operaciones'},
     {id:'clientes',icon:_svgCli,label:'Clientes',subs:[{id:'lista',label:'Lista de clientes'}],group:'Operaciones'},
     {id:'agenda',icon:_svgAge,label:'Agenda',subs:[{id:'hoy',label:'Citas de hoy'}],group:'Operaciones'},
@@ -2435,7 +4041,7 @@ function renderApp(){
     {id:'chat',icon:_svgChat,label:'Chat con IA',single:true,group:'Análisis'},
     {id:'equipo',icon:_svgEqp,label:'Equipo',single:true,group:'Admin'},
     {id:'config',icon:_svgCfg,label:'Configuración',single:true,group:'Admin'},
-  ].filter(n=>puedo(n.id));
+  ].filter(n=>puedo(n.id)&&(moduloActivo(n.id)||(S.negocioTipo==='prueba'&&(n.id==='chat'||n.id==='graficos'))));
 
   const sbHtml=(()=>{
     const hoyBadge=hoy();
@@ -2487,7 +4093,7 @@ function renderApp(){
     </select>
     <select style="max-width:170px" class="filter-select" onchange="setCat(this.value)">
       <option value="Todas">🏷️ Todas las categorías</option>
-      ${(S.filtroTipo==='Egreso'?CATS_EG:S.filtroTipo==='Ingreso'?CATS_ING:[...CATS_ING,...CATS_EG]).map(c=>`<option value="${c}" ${S.filtroCategoria===c?'selected':''}>${c}</option>`).join('')}
+      ${(S.filtroTipo==='Egreso'?CATS_EG:S.filtroTipo==='Ingreso'?getCategorias():[...getCategorias(),...CATS_EG]).map(c=>`<option value="${c}" ${S.filtroCategoria===c?'selected':''}>${c}</option>`).join('')}
     </select>
     ${(S.subSeccion==='historial')?`<input class="filter-input" id="caja-busq-input" style="max-width:160px" placeholder="🔍 Buscar..." value="${S.filtroBusqueda}" oninput="filtrarCajaDOM(this.value)">`:''}
     <div class="spacer"></div>
@@ -2497,8 +4103,29 @@ function renderApp(){
     <button class="btn btn-primary btn-sm" onclick="openModal('movimiento')">+ Nuevo</button>
   </div>`);
 
+  const _esPrueba=S.negocioTipo==='prueba'||S.esPrueba===true;
+  const _waActivar='https://wa.me/51982287999?text='+encodeURIComponent('Hola, quiero activar mi cuenta de Sesko. Mi correo es '+(S.user?.email||''));
+  const _overlayBloqueado=(titulo)=>`<div style="position:relative;min-height:320px;display:flex;align-items:center;justify-content:center;border-radius:14px;overflow:hidden;background:var(--bg);border:1px solid var(--border)">
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);z-index:1"></div>
+    <div style="position:relative;z-index:2;text-align:center;padding:40px 32px">
+      <div style="font-size:48px;margin-bottom:14px">🔒</div>
+      <div style="font-size:18px;font-weight:800;color:#fff;margin-bottom:8px">Módulo bloqueado</div>
+      <div style="font-size:13.5px;color:rgba(255,255,255,.7);margin-bottom:22px;line-height:1.5">Disponible en tu cuenta activa por <strong>S/299/mes</strong></div>
+      <a href="${_waActivar}" target="_blank" style="display:inline-block;padding:11px 28px;border-radius:9px;background:#f97316;color:#fff;font-size:14px;font-weight:700;text-decoration:none;font-family:'Inter',sans-serif">Activar cuenta →</a>
+    </div>
+  </div>`;
+  const _trialBanner=_esPrueba?`<div style="background:linear-gradient(90deg,#f97316,#ea580c);padding:10px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:56px;z-index:40">
+    <span style="font-size:13px;color:#fff;font-weight:700;flex-shrink:0">⚡ Prueba gratuita</span>
+    <div style="flex:1;min-width:120px;max-width:200px;height:6px;background:rgba(255,255,255,.25);border-radius:99px;overflow:hidden"><div style="height:100%;width:${Math.min(100,Math.round((S.movimientosUsados/25)*100))}%;background:#fff;border-radius:99px"></div></div>
+    <span style="font-size:12px;color:rgba(255,255,255,.9);white-space:nowrap">${S.movimientosUsados} de 25 movimientos usados</span>
+    <a href="${_waActivar}" target="_blank" style="margin-left:auto;padding:6px 14px;background:#fff;color:#ea580c;border-radius:7px;font-size:12px;font-weight:700;text-decoration:none;flex-shrink:0;white-space:nowrap">Activar cuenta →</a>
+  </div>`:'';
   let contenido='', topbarTitle='Dashboard', topbarSub='Resumen general';
 
+  /* ========================================
+     VISTAS — DASHBOARD
+     Resumen general: KPIs, gráfico, alertas, actividad reciente
+     ======================================== */
   if(S.seccion==='dashboard'){
     topbarTitle='Dashboard';topbarSub='Resumen · '+mesLabel;
     const hoyStr2=hoy();
@@ -2513,30 +4140,46 @@ function renderApp(){
     const mesActual=S.filtroMes==='todos'?mesCurrent():S.filtroMes;
     const kpiAct=calcKPIsMes(mesActual);
     const kpiAnt=calcKPIsMes(mesAnterior(mesActual));
-    const dI=kpiAnt.ing>0?Math.round(((kpiAct.ing-kpiAnt.ing)/kpiAnt.ing)*100):null;
-    const dE=kpiAnt.eg>0?Math.round(((kpiAct.eg-kpiAnt.eg)/kpiAnt.eg)*100):null;
-    const dN=kpiAnt.ing>0?Math.round((((kpiAct.ing-kpiAct.eg)-(kpiAnt.ing-kpiAnt.eg))/(Math.abs(kpiAnt.ing-kpiAnt.eg)||1))*100):null;
-    const ingCount=datos.filter(m=>m.tipo==='Ingreso').length;
-    const egCount=datos.filter(m=>m.tipo==='Egreso').length;
-    const db=(d,inv=false,count=total)=>d===null?`<span style="font-size:11px;color:var(--text3)">${count} movimiento${count!==1?'s':''}</span>`:`<span style="font-size:11px;font-weight:600;color:${(inv?d<0:d>0)?'var(--green)':'var(--red)'}">${d>0?'↑':'↓'} ${Math.abs(d)}% vs mes ant.</span>`;
+    const mesAntStr=mesAnterior(mesActual);
+    const ingMovsAnt=S.movimientos.filter(m=>mesAntStr&&mesAntStr!=='todos'&&m.fecha&&m.fecha.startsWith(mesAntStr)&&m.tipo==='Ingreso');
+    const ticketAnt=ingMovsAnt.length?kpiAnt.ing/ingMovsAnt.length:0;
+    const netoAct=kpiAct.ing-kpiAct.eg;
+    const netoAnt=kpiAnt.ing-kpiAnt.eg;
+    const _pct=(act,ant)=>{
+      if(ant===0&&act===0) return null;
+      if(ant===0) return 'primer';
+      return parseFloat(((act-ant)/ant*100).toFixed(1));
+    };
+    const dI=_pct(kpiAct.ing,kpiAnt.ing);
+    const dE=_pct(kpiAct.eg,kpiAnt.eg);
+    const dN=_pct(netoAct,netoAnt);
+    const dT=_pct(ticket,ticketAnt);
+    const kpiBadge=(pct,inv=false)=>{
+      if(pct===null) return `<span style="font-size:11px;color:var(--text3)">Sin datos anteriores</span>`;
+      if(pct==='primer') return `<span style="font-size:11px;color:var(--text3)">Primer mes</span>`;
+      const good=inv?pct<0:pct>0;
+      const color=pct===0?'var(--text3)':good?'var(--green)':'var(--red)';
+      const arrow=pct>0?'↑':pct<0?'↓':'→';
+      return `<span style="font-size:11px;font-weight:600;color:${color}">${arrow} ${Math.abs(pct)}% vs mes anterior</span>`;
+    };
 
     // Banners
     const entVencD=S.entregas.filter(e=>e.estado!=='Completada'&&e.fechaEntrega<hoyStr2);
     const entHoyD=S.entregas.filter(e=>e.estado!=='Completada'&&e.fechaEntrega===hoyStr2);
     let banners='';
-    if(entVencD.length>0) banners+=`<div class="alert-banner warn">📦 ${entVencD.length} entrega${entVencD.length>1?'s':''} vencida${entVencD.length>1?'s':''}: ${entVencD.map(e=>e.cliente).slice(0,2).join(', ')}. <span class="alert-banner-link" onclick="ir('entregas')">Ver entregas →</span></div>`;
-    if(entHoyD.length>0) banners+=`<div class="alert-banner warn" style="background:#fef3cd;border-color:#fcd34d;color:#92400e">📦 ${entHoyD.length} entrega${entHoyD.length>1?'s':''} para hoy: ${entHoyD.map(e=>e.cliente+' '+e.horaEntrega).join(', ')}. <span class="alert-banner-link" onclick="ir('entregas')">Ver entregas →</span></div>`;
-    if(citasHoyD.length>0) banners+=`<div class="alert-banner info">📅 ${citasHoyD.length} cita${citasHoyD.length>1?'s':''} pendiente${citasHoyD.length>1?'s':''} hoy: ${citasHoyD.map(c=>c.hora+' '+c.cliente).join(', ')}. <span class="alert-banner-link" onclick="ir('agenda','hoy')">Ver agenda →</span></div>`;
+    if(moduloActivo('entregas')&&entVencD.length>0) banners+=`<div class="alert-banner warn">📦 ${entVencD.length} entrega${entVencD.length>1?'s':''} vencida${entVencD.length>1?'s':''}: ${entVencD.map(e=>e.cliente).slice(0,2).join(', ')}. <span class="alert-banner-link" onclick="ir('entregas')">Ver entregas →</span></div>`;
+    if(moduloActivo('entregas')&&entHoyD.length>0) banners+=`<div class="alert-banner warn" style="background:#fef3cd;border-color:#fcd34d;color:#92400e">📦 ${entHoyD.length} entrega${entHoyD.length>1?'s':''} para hoy: ${entHoyD.map(e=>e.cliente+' '+e.horaEntrega).join(', ')}. <span class="alert-banner-link" onclick="ir('entregas')">Ver entregas →</span></div>`;
+    if(moduloActivo('agenda')&&citasHoyD.length>0) banners+=`<div class="alert-banner info">📅 ${citasHoyD.length} cita${citasHoyD.length>1?'s':''} pendiente${citasHoyD.length>1?'s':''} hoy: ${citasHoyD.map(c=>c.hora+' '+c.cliente).join(', ')}. <span class="alert-banner-link" onclick="ir('agenda','hoy')">Ver agenda →</span></div>`;
 
     const _hora=new Date().getHours();
     const _saludo=_hora<12?'Buenos días':_hora<18?'Buenas tardes':'Buenas noches';
-    const _rawNom=S.nombre||((S.user?.email||'').split('@')[0].replace(/[^a-zA-Z]/g,' ').trim());
-    const _nomCap=_rawNom.split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');
+    const _rawNom=S.nombre||'';
+    const _nomCap=_rawNom.trim()?_rawNom.split(' ').filter(w=>/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(w)).map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' '):'';
     const _diasSem=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
     const _mesesN=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
     const _ahora=new Date();
     const _fechaLeg=`${_diasSem[_ahora.getDay()]} ${_ahora.getDate()} de ${_mesesN[_ahora.getMonth()]}`;
-    topbarTitle=_saludo+', '+_nomCap+'! 👋';
+    topbarTitle=_saludo+(_nomCap?', '+_nomCap:'')+'! 👋';
     topbarSub=_fechaLeg;
     contenido=`
     ${banners}
@@ -2544,25 +4187,25 @@ function renderApp(){
       <div class="kpi-card">
         <div class="kpi-label">Ingresos del mes</div>
         <div class="kpi-value" style="color:var(--green);font-weight:800">${fmt(ing)}</div>
-        <div class="kpi-sub">${db(dI,false,ingCount)}</div>
+        <div class="kpi-sub">${kpiBadge(dI)}</div>
         <div class="kpi-bar"><div class="kpi-fill" style="width:${ing>0?Math.min(100,Math.round((ing/(ing+eg||1))*100)):0}%;background:var(--green)"></div></div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Egresos del mes</div>
         <div class="kpi-value" style="color:var(--red);font-weight:800">${fmt(eg)}</div>
-        <div class="kpi-sub">${db(dE,true,egCount)}</div>
+        <div class="kpi-sub">${kpiBadge(dE,true)}</div>
         <div class="kpi-bar"><div class="kpi-fill" style="width:${ing>0?Math.min(100,Math.round((eg/ing)*100)):0}%;background:var(--red)"></div></div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Neto del mes</div>
         <div class="kpi-value" style="color:${neto>=0?'var(--blue)':'var(--red)'};font-weight:800">${fmt(neto)}</div>
-        <div class="kpi-sub"><span style="font-size:11px;font-weight:600;background:${salud>=40?'var(--green-light)':'var(--red-light)'};color:${salud>=40?'var(--green)':'var(--red)'};padding:2px 7px;border-radius:99px">Margen ${salud}%</span></div>
+        <div class="kpi-sub">${kpiBadge(dN)}</div>
         <div class="kpi-bar"><div class="kpi-fill" style="width:${Math.max(0,salud)}%;background:var(--blue)"></div></div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Ticket promedio</div>
         <div class="kpi-value" style="color:var(--yellow);font-weight:800">${fmt(ticket)}</div>
-        <div class="kpi-sub"><span style="font-size:11px;color:var(--text3)">${total} movimientos</span></div>
+        <div class="kpi-sub">${kpiBadge(dT)}</div>
         <div class="kpi-bar"><div class="kpi-fill" style="width:60%;background:var(--yellow)"></div></div>
       </div>
     </div>
@@ -2604,18 +4247,19 @@ function renderApp(){
             <span style="font-size:11px;color:var(--blue);cursor:pointer" onclick="ir('entregas')">Ver entregas →</span>
           </div>
           <div style="display:flex;flex-direction:column;gap:9px">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--blue-light);border-radius:8px">
+            ${moduloActivo('agenda')?`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--blue-light);border-radius:8px">
               <span style="font-size:12px;color:var(--blue)">👥 Clientes este mes</span>
               <span style="font-size:14px;font-weight:800;color:var(--blue);font-family:'JetBrains Mono',monospace">${cliMes.length}</span>
-            </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--yellow-light);border-radius:8px;cursor:pointer" onclick="ir('entregas')">
+            </div>`:''}
+            ${moduloActivo('entregas')?`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--yellow-light);border-radius:8px;cursor:pointer" onclick="ir('entregas')">
               <span style="font-size:12px;color:var(--yellow)">📦 Entregas pendientes${entVencD2.length>0?` <span style="background:var(--red-light);color:var(--red);font-size:10px;padding:1px 5px;border-radius:99px;font-weight:600">${entVencD2.length} vencida${entVencD2.length>1?'s':''}</span>`:''}</span>
               <span style="font-size:14px;font-weight:800;color:var(--yellow);font-family:'JetBrains Mono',monospace">${entPendD.length}</span>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--red-light);border-radius:8px">
               <span style="font-size:12px;color:var(--red)">💰 Cobros pendientes</span>
               <span style="font-size:14px;font-weight:800;color:var(--red);font-family:'JetBrains Mono',monospace">${fmt(cobroPend)}</span>
-            </div>
+            </div>`:''}
+            ${!moduloActivo('agenda')&&!moduloActivo('entregas')?`<div style="text-align:center;padding:14px 0;color:var(--text3);font-size:12px">Sin módulos de seguimiento activos</div>`:''}
           </div>`;
         })()}
       </div>
@@ -2643,7 +4287,7 @@ function renderApp(){
         sortedCatIng.map(([cat,val],i)=>`<div class="hbar-wrap"><div class="hbar-label">${cat}</div><div class="hbar-track"><div class="hbar-fill" style="width:${Math.round((val/maxCatIng)*100)}%;background:${CAT_COLORES[i]}"></div></div><div class="hbar-val">${fmt(val)}</div></div>`).join('')}
       </div>
       <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="card">
+        ${moduloActivo('agenda')?`<div class="card">
           <div class="card-title" style="margin-bottom:8px">📅 Citas de hoy</div>
           ${citasHoyD.length===0?`<div style="text-align:center;padding:14px 0;color:var(--text3);font-size:12px">📭 Sin citas hoy</div>`:
           citasHoyD.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border2)">
@@ -2652,7 +4296,7 @@ function renderApp(){
             <span style="font-size:10px;padding:2px 7px;border-radius:99px;font-weight:500;background:${c.estado==='Confirmada'?'var(--green-light)':c.estado==='Completada'?'var(--border2)':'var(--yellow-light)'};color:${c.estado==='Confirmada'?'var(--green)':c.estado==='Completada'?'var(--text3)':'var(--yellow)'}">${c.estado}</span>
           </div>`).join('')}
           ${S.citas.filter(c=>c.fecha===hoyStr2).length>3?`<div style="text-align:center;margin-top:6px"><span style="font-size:11px;color:var(--blue);cursor:pointer" onclick="ir('agenda','hoy')">Ver todas →</span></div>`:''}
-        </div>
+        </div>`:''}
         <div class="card">
           <div class="card-title" style="margin-bottom:8px">📋 Resumen rápido</div>
           ${(()=>{
@@ -2667,6 +4311,10 @@ function renderApp(){
 
     `;
   }
+  /* ========================================
+     VISTAS — CAJA Y MOVIMIENTOS
+     Historial de movimientos, nuevo movimiento, comprobantes y cotizaciones
+     ======================================== */
   else if(S.seccion==='caja'&&S.subSeccion==='movimientos'){
     // Redirigir al historial — movimientos solo se crean desde el modal
     S.subSeccion='historial'; render(); return;
@@ -2763,6 +4411,10 @@ function renderApp(){
     </div>`}`;
   }
 
+  /* ========================================
+     VISTAS — INVENTARIO
+     Tabla de productos, stock, salidas y alertas de stock bajo
+     ======================================== */
   else if(S.seccion==='inventario'){
     topbarTitle=S.subSeccion==='salidas'?'Registro de salidas':'Inventario';
     topbarSub=S.subSeccion==='salidas'?'Historial de salidas registradas':'Productos y stock';
@@ -2865,6 +4517,10 @@ function renderApp(){
     }
   }
 
+  /* ========================================
+     VISTAS — CLIENTES Y AGENDA
+     Listado de clientes, detalle, historial de compras y citas
+     ======================================== */
   else if(S.seccion==='clientes'){
     topbarTitle='Clientes';topbarSub='Gestión de clientes';
     const clienteMap={};const clienteCount={};
@@ -2958,6 +4614,8 @@ function renderApp(){
   }
   else if(S.seccion==='agenda'){
     topbarTitle='Agenda';topbarSub='Citas y calendario';
+    if(_esPrueba){contenido=_overlayBloqueado('Agenda');}
+    else{
     const hoyAg=hoy();
     const semFinAg=diasDesdeHoy(7);
     const mesActAg=hoyAg.slice(0,7);
@@ -3045,10 +4703,17 @@ function renderApp(){
       </div>
       <div class="card" style="padding:14px">${calendarHTML}</div>
     </div>`;
+    } // end else(!_esPrueba) agenda
   }
 
+  /* ========================================
+     VISTAS — COMPROBANTES Y ENTREGAS
+     Cotizaciones, comprobantes (boletas/facturas) y seguimiento de entregas
+     ======================================== */
   else if(S.seccion==='cotizaciones'){
     topbarTitle='Cotizaciones';topbarSub='Presupuestos y seguimiento';
+    if(_esPrueba){contenido=_overlayBloqueado('Cotizaciones');}
+    else{
     const estadoColor={Borrador:'var(--text3)',Enviada:'var(--blue)',Aprobada:'var(--green)',Rechazada:'var(--red)',Convertida:'var(--purple)'};
     const estadoBg={Borrador:'var(--border2)',Enviada:'var(--blue-light)',Aprobada:'var(--green-light)',Rechazada:'var(--red-light)',Convertida:'var(--purple-light)'};
     const pendientes=S.cotizaciones.filter(c=>c.estado==='Borrador'||c.estado==='Enviada');
@@ -3101,6 +4766,7 @@ function renderApp(){
           </div>`;
         }).join('')}
       </div>`}`;
+    } // end else(!_esPrueba) cotizaciones
   }
 
   else if(S.seccion==='graficos'){
@@ -3140,6 +4806,8 @@ function renderApp(){
 
   else if(S.seccion==='entregas'){
     topbarTitle='Entregas';topbarSub='Seguimiento de entregas';
+    if(_esPrueba){contenido=_overlayBloqueado('Entregas');}
+    else{
     const hoyStr3=hoy();
     const semStr=diasDesdeHoy(7);
     const entPend=S.entregas.filter(e=>e.estado!=='Completada');
@@ -3229,10 +4897,12 @@ function renderApp(){
     ${entFiltradas.length===0
       ?`<div class="card empty"><div class="empty-icon">📦</div><p>Sin entregas en este filtro.</p></div>`
       :`<div class="card" style="padding:0;overflow:hidden">${renderEnt2(entFiltradas)}</div>`}`;
+  } // end else(!_esPrueba) entregas
   }
 
-    else if(S.seccion==='chat'){
+  else if(S.seccion==='chat'){
     topbarTitle='Asistente IA';topbarSub='Tu analista de negocio en tiempo real';
+    {
     // Computar insights para tarjetas y alertas
     const _cN=new Date();
     const _cMA=mesCurrent();
@@ -3370,7 +5040,8 @@ function renderApp(){
     }
     _ch+='</div>';
     _ch+='</div></div></div>';
-    contenido=_ch;
+    contenido=_esPrueba?`<div style="position:relative;min-height:400px;overflow:hidden;border-radius:12px">${_ch}<div style="position:absolute;inset:0;background:rgba(10,12,18,.82);backdrop-filter:blur(3px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;border-radius:12px;border:1px solid rgba(99,102,241,.25)"><span style="font-size:36px">🤖</span><div style="font-size:17px;font-weight:700;color:#e2e8f0">Chat con IA</div><div style="font-size:13px;color:rgba(255,255,255,.5);text-align:center;max-width:260px">Disponible en el plan de pago.<br>Activa tu cuenta para usar el asistente.</div><button onclick="window.location.hash='activar'" style="margin-top:4px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:600;cursor:pointer">Activar cuenta →</button></div></div>`:_ch;
+    }
   }
 
   else if(S.seccion==='equipo'){
@@ -3398,7 +5069,7 @@ function renderApp(){
         <div class="card" style="padding:0;overflow:hidden">
           <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
             <span style="font-size:13px;font-weight:600">Miembros del equipo</span>
-            ${puedo('config')?'<button class="btn btn-primary btn-sm" onclick="gestionarCodigos()">⚙️ Códigos de acceso</button>':''}
+            ${puedo('config')?(_esPrueba?`<span title="Disponible en cuenta activa" style="font-size:11px;color:var(--text3);background:var(--border);padding:4px 10px;border-radius:6px;cursor:default">🔒 Códigos de acceso</span>`:'<button class="btn btn-primary btn-sm" onclick="gestionarCodigos()">⚙️ Códigos de acceso</button>'):''}
           </div>
           <div style="padding:12px 16px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:10px">
             <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#6366f1);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">${S.user?.email?.[0]?.toUpperCase()||'?'}</div>
@@ -3420,6 +5091,10 @@ function renderApp(){
     </div>`;
   }
 
+  /* ========================================
+     VISTAS — CONFIGURACIÓN
+     Datos del negocio, categorías, módulos activos, cuenta y apariencia
+     ======================================== */
   else if(S.seccion==='config'){
     topbarTitle='Configuración';topbarSub='Datos del negocio';
     const ed=S.configEditando;
@@ -3445,13 +5120,56 @@ function renderApp(){
         </div>
         ${!ed?`<p style="font-size:11.5px;color:var(--text3);margin-top:10px">💡 Haz clic en <b>Editar</b> para modificar los datos del negocio.</p>`:''}
       </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title" style="margin-bottom:6px">🏷️ Mis categorías</div>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:14px">Se usan en todos los selectores de categoría de la app.</p>
+        <div id="cfg-cats-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+          ${getCategorias().map((c,i)=>{
+            return `<div style="display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:20px;background:#1e2235;border:1.5px solid #3d6bff;font-size:12.5px;font-weight:500;color:#eceef8">
+              <span id="cfg-cat-lbl-${i}" style="cursor:pointer" onclick="cfgEditarCategoria(${i})" title="Clic para editar">${c}</span>
+              <span onclick="cfgEliminarCategoria(${i})" style="cursor:pointer;font-size:15px;line-height:1;color:#64748b;transition:color .15s" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#64748b'">×</span>
+            </div>`;
+          }).join('')}
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input id="cfg_cat_nueva" type="text" placeholder="Nueva categoría..." maxlength="40" style="flex:1;font-size:13px" onkeydown="if(event.key==='Enter'){event.preventDefault();cfgAgregarCategoria();}">
+          <button class="btn btn-primary btn-sm" onclick="cfgAgregarCategoria()">+ Agregar</button>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="cfgGuardarCategorias()" style="width:100%">💾 Guardar cambios</button>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title" style="margin-bottom:14px">🧩 Módulos activos</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${OB_MODULOS.map(m=>{
+            let on=S.negocioConfig?.modulos?.[m.id]!==false;
+            if(_esPrueba&&(m.id==='entregas'||m.id==='ia')) on=false;
+            const bloqueado=_esPrueba&&(m.id==='entregas'||m.id==='ia');
+            return `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;background:var(--bg);border:1px solid var(--border)">
+              <span style="font-size:18px">${m.icon}</span>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:600;color:var(--text)">${m.label}</div>
+                <div style="font-size:11.5px;color:var(--text3);margin-top:1px">${m.desc}</div>
+              </div>
+              <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;flex-shrink:0;${bloqueado?'background:rgba(239,68,68,.1);color:#f87171':on?'background:#dcfce7;color:#16a34a':'background:var(--border);color:var(--text3)'}">${bloqueado?'Plan pago':on?'Activo':'Inactivo'}</span>
+            </div>`;
+          }).join('')}
+        </div>
+        <p style="font-size:11.5px;color:var(--text3);margin-top:12px;line-height:1.5">Los módulos son configurados por Cifra. Para cambios escribe al <strong style="color:var(--text2)">982 287 999</strong></p>
+      </div>
       <div class="card">
         <div class="card-title">🔐 Cuenta</div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
           <div><div style="font-size:13px;font-weight:500">${S.user?.email}</div><div style="font-size:12px;color:var(--text3)">Usuario activo</div></div>
           <button class="btn btn-danger btn-sm" onclick="doLogout()">Cerrar sesión</button>
         </div>
-        <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px">
+        <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:11.5px;font-weight:500;color:var(--text2);margin-bottom:6px">Tu nombre (aparece en el saludo)</div>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="cfg_nombre_usuario" placeholder="Ej: Sebastian Bernaola" value="${S.nombre||''}" style="flex:1;font-size:13px">
+            <button class="btn btn-primary btn-sm" onclick="guardarNombreUsuario()">Guardar</button>
+          </div>
+        </div>
+        <div style="padding-top:10px">
           <p style="font-size:12px;color:var(--text3)">El código de invitación se gestiona directamente en Firebase Console bajo <span style="font-family:'JetBrains Mono',monospace;color:var(--text2)">config/inviteCode</span>.</p>
         </div>
       </div>
@@ -3475,7 +5193,7 @@ function renderApp(){
       const dis=cliExiste?'disabled':'';
       const av=cliNombre?cliNombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase():'?';
       // Build items rows
-      const items=S._items&&S._items.length>0?S._items:[{desc:'',cat:CATS_ING[0],cantidad:'1',precioUnit:'',precio:''}];
+      const items=S._items&&S._items.length>0?S._items:[{desc:'',cat:getCategorias()[0],cantidad:'1',precioUnit:'',precio:''}];
       // Recalcular subtotales
       items.forEach(it=>{ if(it.precioUnit!==undefined) it.precio=(parseFloat(it.cantidad||1)||1)*(parseFloat(it.precioUnit||0)||0); });
       const totalItems=items.reduce((s,it)=>s+(parseFloat(it.precio)||0),0);
@@ -3486,7 +5204,7 @@ function renderApp(){
         <div class="item-row" id="irow${i}" style="grid-template-columns:2fr 1.2fr 60px 90px 28px">
           <input placeholder="Ej: Rollers blackout sala" value="${it.desc||''}" oninput="updateItem(${i},'desc',this.value)" style="border-left:none">
           <select onchange="updateItem(${i},'cat',this.value)" style="font-size:11.5px">
-            ${CATS_ING.map(c=>`<option value="${c}" ${it.cat===c?'selected':''}>${c}</option>`).join('')}
+            ${getCategorias().map(c=>`<option value="${c}" ${it.cat===c?'selected':''}>${c}</option>`).join('')}
           </select>
           <input type="number" data-field="cantidad" placeholder="1" min="1" step="1" value="${it.cantidad||'1'}" oninput="updateItem(${i},'cantidad',this.value)" style="font-family:'JetBrains Mono',monospace;text-align:center">
           <input type="number" data-field="precioUnit" placeholder="Precio" min="0" step="0.01" value="${it.precioUnit||''}" oninput="updateItem(${i},'precioUnit',this.value)" style="font-family:'JetBrains Mono',monospace;border-right:none">
@@ -3639,7 +5357,7 @@ function renderApp(){
         </div>
       </div></div>`;
     } else if(S.modalTipo==='cotizacion'){
-      const itemsCot=S._items&&S._items.length>0?S._items:[{desc:'',cat:CATS_ING[0],precio:'',costo:''}];
+      const itemsCot=S._items&&S._items.length>0?S._items:[{desc:'',cat:getCategorias()[0],precio:'',costo:''}];
       const totalCot=itemsCot.reduce((s,it)=>s+(parseFloat(it.precio)||0),0);
       const costoCot=itemsCot.reduce((s,it)=>s+(parseFloat(it.costo)||0),0);
       const margenCot=totalCot>0?Math.round(((totalCot-costoCot)/totalCot)*100):0;
@@ -3648,7 +5366,7 @@ function renderApp(){
       const cotErrorHtml=S.error?'<div class="error-msg" style="margin:10px 20px 0">'+S.error+'</div>':'';
       const cotClienteOpts=S.clientes.map(c=>'<option value="'+c.nombre+'">').join('');
       const cotItemRows=itemsCot.map((it,i)=>{
-        const catOpts=CATS_ING.map(c=>'<option value="'+c+'"'+(it.cat===c?' selected':'')+'>'+c+'</option>').join('');
+        const catOpts=getCategorias().map(c=>'<option value="'+c+'"'+(it.cat===c?' selected':'')+'>'+c+'</option>').join('');
         return '<div class="item-row" id="cotirow'+i+'" style="grid-template-columns:2fr 1.2fr 90px 90px 28px">'
           +'<input placeholder="Ej: Rollers blackout sala" value="'+(it.desc||'')+'" oninput="updateItem('+i+',\'desc\',this.value)" style="border-left:none">'
           +'<select onchange="updateItem('+i+',\'cat\',this.value)" style="font-size:11.5px">'+catOpts+'</select>'
@@ -3748,7 +5466,7 @@ function renderApp(){
         </div>
         <div>
           <div class="sb-logo-name">Sesko</div>
-          <div class="sb-logo-sub">S&D Decoraciones</div>
+          <div class="sb-logo-sub">${S.negocioConfig?.nombre||S.config.nombre||'Mi negocio'}</div>
         </div>
       </div>
       <div class="sb-nav">${sbHtml}</div>
@@ -3786,6 +5504,7 @@ function renderApp(){
         <div class="notif-panel-header">Notificaciones <span class="notif-panel-close" onclick="closeNotifPanel()">✕</span></div>
         ${(()=>{const ns=getNotificaciones();return ns.length===0?'<div style="padding:16px;text-align:center;font-size:12px;color:var(--text3)">Sin notificaciones</div>':ns.map(n=>`<div class="notif-item-p" onclick="event.stopPropagation();ir('${n.link}','${n.sub}');closeNotifPanel()"><div class="notif-ic ${n.tipo}">${n.ic}</div><div><div class="notif-text">${n.texto}</div></div></div>`).join('');})()}
       </div>`:''}
+      ${_trialBanner}
       ${toolbarHtml}
       <div class="content">${contenido}</div>
     </div>
@@ -3802,7 +5521,10 @@ onAuthStateChanged(auth, user=>{
   S.inicializando=false;
   if(user){
     S.user=user;S.error='';S.loading=false;
-    if(!user.isAnonymous) cargarDatos(user.uid); // ignorar sesión anónima usada para validar código
+    if(!user.isAnonymous){
+      if(user.email===SUPER_ADMIN_EMAIL){render();cargarNegociosAdmin();}
+      else cargarDatos(user.uid);
+    }
   }
   else{S.user=null;S.movimientos=[];S.clientes=[];S.citas=[];S.inventario=[];S.comprobantes=[];S.salidas=[];S.entregas=[];S.cotizaciones=[];S.loading=false;render();}
 });
