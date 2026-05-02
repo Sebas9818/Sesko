@@ -1876,6 +1876,118 @@
       .trial-banner { flex-wrap: wrap; gap: 6px }
       .trial-banner .trial-progress { width: 100% }
     }
+
+    @media (max-width: 640px) {
+
+      /* ── LAYOUT ── */
+      .main { margin-left: 0 }
+      .content { padding: 10px 12px }
+      .topbar { padding: 0 12px }
+      .topbar-left h1 { font-size: 13px }
+      .topbar-left p { font-size: 10px }
+
+      /* ── KPIs ── */
+      .kpi-grid { grid-template-columns: repeat(2,1fr) !important; gap: 8px }
+      .kpi-value { font-size: 18px }
+      .kpi-label { font-size: 10px }
+
+      /* ── DASHBOARD GRIDS ── */
+      .dash-grid { grid-template-columns: 1fr !important }
+      .dash-grid-3 { grid-template-columns: 1fr !important }
+
+      /* ── TRIAL BANNER ── */
+      .trial-banner { flex-direction: column; gap: 8px; padding: 10px 14px }
+      .trial-banner > * { width: 100% }
+      .trial-progress { width: 100% !important }
+
+      /* ── TOOLBAR FILTROS ── */
+      .toolbar { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 12px }
+      .toolbar .filter-select,
+      .toolbar .filter-input,
+      .toolbar .filter-date { width: 100%; max-width: 100% }
+      .toolbar .spacer { display: none }
+
+      /* ── CHIPS CON SCROLL HORIZONTAL ── */
+      .chips-row,
+      [style*="display:flex"][style*="flex-wrap:wrap"] {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap !important;
+        padding-bottom: 4px;
+      }
+      .filter-chip { white-space: nowrap; flex-shrink: 0 }
+
+      /* ── TABLAS → CARDS APILADAS ── */
+      .table-wrap table { display: block; width: 100% }
+      .table-wrap thead { display: none }
+      .table-wrap tbody { display: flex; flex-direction: column; gap: 8px }
+      .table-wrap tbody tr {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+      }
+      .table-wrap tbody tr:hover { background: var(--white) }
+      body.dark .table-wrap tbody tr:hover { background: var(--white) }
+      .table-wrap tbody td {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 2px 0;
+        border: none;
+        font-size: 12px;
+      }
+      .table-wrap tbody td[style*="display:flex"] { flex-wrap: wrap }
+
+      /* ── BOTONES EN TABLA MÁS GRANDES (touch) ── */
+      .table-wrap .btn-icon,
+      .table-wrap .btn-sm {
+        min-width: 32px;
+        min-height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* ── MODAL ── */
+      .modal-backdrop { padding: 10px 8px; align-items: flex-start; padding-top: 20px }
+      .modal { width: 100%; max-width: 100%; margin: 0; padding: 14px 16px; border-radius: 12px }
+      .modal h2 { font-size: 14px }
+      .form-grid { grid-template-columns: 1fr !important; gap: 8px }
+      .form-group.full { grid-column: span 1 !important }
+      .modal-footer { padding: 10px 0 0; gap: 6px }
+      .modal-footer .btn { flex: 1; justify-content: center }
+
+      /* ── ITEMS DE COTIZACIÓN ── */
+      .item-row { grid-template-columns: 1fr !important }
+      .item-row input,
+      .item-row select {
+        border-left: 1px solid var(--border) !important;
+        border-top: none;
+        width: 100%;
+      }
+
+      /* ── NOTIFICACIONES ── */
+      .notif-panel { width: calc(100vw - 24px); right: 8px; left: 8px }
+
+      /* ── PANEL DE ONBOARDING ── */
+      .ob-grid { grid-template-columns: repeat(2,1fr) !important }
+
+      /* ── TOPBAR BOTÓN NUEVO ── */
+      .btn-long-text { display: none !important }
+      .btn-short-text { display: inline !important }
+
+      /* ── CLIENTE CARD ── */
+      .cliente-card { flex-wrap: wrap; gap: 8px }
+      .cliente-card > div:last-child { width: 100%; display: flex; justify-content: flex-end }
+
+      /* ── DARK MODE HOVER FIX ── */
+      body.dark tbody tr:hover { background: rgba(255,255,255,.03) !important }
+
+    }
   </style>
 </head>
 
